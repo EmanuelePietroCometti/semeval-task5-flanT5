@@ -5,8 +5,7 @@ import torch
 # Aggiungi la root al path per importare src
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from transformers import Seq2SeqTrainingArguments
-from transformers.integrations import EarlyStoppingCallback
+from transformers import Seq2SeqTrainingArguments, EarlyStoppingCallback
 from src.data_utils import load_datasets, get_tokenize_function
 from src.model_utils import load_base_model, apply_lora_config
 from src.trainer_utils import ExpectedValueTrainer, RobustDataCollator, compute_metrics
