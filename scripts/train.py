@@ -21,8 +21,22 @@ def main():
     
     print("Tokenizing datasets...")
     tokenize_fn = get_tokenize_function(tokenizer)
-    train_encoded = train_ds.map(tokenize_fn, batched=True)
-    dev_encoded = dev_ds.map(tokenize_fn, batched=True)
+    print("Tokenizing datasets...")
+    tokenize_fn = get_tokenize_function(tokenizer)
+    
+    column_names = train_ds.column_names
+    
+    train_encoded = train_ds.map(
+        tokenize_fn, 
+        batched=True, 
+        remove_columns=column_names
+    )
+    
+    dev_encoded = dev_ds.map(
+        tokenize_fn, 
+        batched=True, 
+        remove_columns=column_names
+    )
     
     # Setup Trainer
     # Token IDs per i numeri "1", "2", "3", "4", "5"
