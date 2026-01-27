@@ -35,7 +35,7 @@ class ExpectedValueTrainer(Seq2SeqTrainer):
                 mode='max',
                 factor=0.5,
                 patience=2,
-                threshold=0.0001,
+                threshold=0.01,
             )
         return self.lr_scheduler
 
