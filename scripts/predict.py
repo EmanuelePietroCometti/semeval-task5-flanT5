@@ -29,15 +29,14 @@ def main():
     print(f"Leggo i dati da {TEST_FILE}...")
     with open(TEST_FILE, 'r') as f:
         raw_data = json.load(f)
-        data_list = list(raw_data.values()) if isinstance(raw_data, dict) else raw_data
 
-    print(f"Avvio inferenza su {len(data_list)} esempi...")
+    print(f"Avvio inferenza su {len(raw_data)} esempi...")
     predictions = []
 
     os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
     
     with open(OUTPUT_FILE, 'w') as f_out:
-        for example in tqdm(data_list):
+        for sample_id, example in raw_data.items():
             try:
                 score = get_prediction(
                     model=model,
@@ -51,7 +50,7 @@ def main():
                 )
                 
                 result = {
-                    "instance_id": example["instance_id"],
+                    "instance_id": sample_id,
                     "prediction": score
                 }
     
