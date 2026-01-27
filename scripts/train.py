@@ -1,12 +1,21 @@
 import sys
 import os
+import sys
+import os
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+import warnings
+warnings.filterwarnings("ignore")
 import torch
+from functools import partial
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from transformers import Seq2SeqTrainingArguments, EarlyStoppingCallback
+from transformers import EarlyStoppingCallback
+from transformers.trainer_callback import PrinterCallback
 from src.data_utils import load_datasets, get_tokenize_function
 from src.model_utils import load_base_model, apply_lora_config
-from src.trainer_utils import ExpectedValueTrainer, RobustDataCollator, compute_metrics
+from src.trainer_utils import ExpectedValueTrainer, RobustDataCollator, compute_metrics, CustomSeq2SeqTrainingArguments
 
 def main():
     TRAIN_FILE = "data/raw/train.json"
@@ -18,8 +27,6 @@ def main():
     model, tokenizer = load_base_model()
     model = apply_lora_config(model)
     
-    print("Tokenizing datasets...")
-    tokenize_fn = get_tokenize_function(tokenizer)
     print("Tokenizing datasets...")
     tokenize_fn = get_tokenize_function(tokenizer)
 
@@ -47,12 +54,17 @@ def main():
     learning_rate = 2e-4
     weight_decay = 0.01
 
-    training_args = Seq2SeqTrainingArguments(
+    training_args = CustomSeq2SeqTrainingArguments(
         output_dir="./outputs/models/flan_t5_lora",
         eval_strategy="steps",
         save_strategy="steps",
         eval_steps=100,
         save_steps=100,
+        logging_dir="./logs",
+        logging_steps=20,
+        log_level="error", 
+        disable_tqdm=False,
+        report_to="wandb",
         lr_scheduler_type="cosine",
         warmup_ratio=0.01,
         optim="adafactor",
@@ -63,17 +75,21 @@ def main():
         dataloader_num_workers=4, # Su Windows dà errore, mettere 0
         num_train_epochs=num_epochs,
         weight_decay=weight_decay,
-        logging_dir="./logs",
-        logging_steps=20,
         max_grad_norm=1.0,
         predict_with_generate=False,
         load_best_model_at_end=True,
-        metric_for_best_model="accuracy_within_std",
+        metric_for_best_model="combined_score",
         greater_is_better=True,
         fp16=False,
         bf16=torch.cuda.is_bf16_supported(),
         label_names=["labels", "target_scores", "stdev"], 
         remove_unused_columns=False
+    )
+
+    custom_metrics_fn = partial(
+        compute_metrics, 
+        acc_weight=training_args.acc_weight, 
+        spearman_weight=training_args.spearman_weight
     )
 
     # Trainer
@@ -82,13 +98,15 @@ def main():
         args=training_args,
         train_dataset=train_encoded,
         eval_dataset=dev_encoded,
-        compute_metrics=compute_metrics,
+        compute_metrics=custom_metrics_fn,
         processing_class=tokenizer,
         data_collator=RobustDataCollator(tokenizer, model=model),
-        callbacks=[EarlyStoppingCallback(early_stopping_patience=6)],
+        callbacks=[EarlyStoppingCallback(early_stopping_patience=4)],
         target_token_ids=target_token_ids 
     )
 
+
+    trainer.remove_callback(PrinterCallback)
     print("Avvio Training...")
     trainer.train()
     

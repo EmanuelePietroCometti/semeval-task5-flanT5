@@ -1,8 +1,14 @@
 import torch
 import numpy as np
-from transformers import Seq2SeqTrainer, DataCollatorForSeq2Seq
+from dataclasses import dataclass, field
+from transformers import Seq2SeqTrainer, DataCollatorForSeq2Seq, Seq2SeqTrainingArguments
 from scipy.stats import spearmanr
 from torch.optim.lr_scheduler import ReduceLROnPlateau
+
+@dataclass
+class CustomSeq2SeqTrainingArguments(Seq2SeqTrainingArguments):
+    acc_weight: float = field(default=0.7, metadata={"help": "Peso per l'accuracy"})
+    spearman_weight: float = field(default=0.3, metadata={"help": "Peso per Spearman"})
 
 # Collator Custom
 class RobustDataCollator(DataCollatorForSeq2Seq):
@@ -80,7 +86,7 @@ class ExpectedValueTrainer(Seq2SeqTrainer):
             return (outputs.loss, preds_cont, labels_with_meta)
 
 # Caclolo metriche
-def compute_metrics(eval_pred):
+def compute_metrics(eval_pred, acc_weight=0.7, spearman_weight=0.3):
     preds, labels_with_meta = eval_pred
 
     y_true = labels_with_meta[:, 0]
@@ -92,8 +98,11 @@ def compute_metrics(eval_pred):
 
     rho, _ = spearmanr(y_true, preds)
     if np.isnan(rho): rho = 0.0
+    
+    combined_score = (acc_weight * accuracy) + (spearman_weight * rho)
 
     return {
         "accuracy_within_std": float(accuracy),
-        "spearman": float(rho)
+        "spearman": float(rho),
+        "combined_score": float(combined_score)
     }
