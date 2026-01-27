@@ -20,7 +20,7 @@ from transformers import EarlyStoppingCallback
 from transformers.trainer_callback import PrinterCallback
 from src.data_utils import load_datasets, get_tokenize_function
 from src.model_utils import load_base_model, apply_lora_config
-from src.trainer_utils import ExpectedValueTrainer, RobustDataCollator, compute_metrics, CustomSeq2SeqTrainingArguments
+from src.trainer_utils import ExpectedValueTrainer, RobustDataCollator, compute_metrics, CustomSeq2SeqTrainingArguments, EvaluationLogCallback
 
 def main():
     TRAIN_FILE = "data/raw/train.json"
@@ -65,9 +65,7 @@ def main():
         save_strategy="steps",
         eval_steps=100,
         save_steps=100,
-        logging_dir="./logs",
-        logging_steps=20,
-        log_level="error", 
+        logging_strategy="no",
         disable_tqdm=False,
         report_to="none",
         lr_scheduler_type="cosine",
@@ -77,7 +75,6 @@ def main():
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size,
         gradient_accumulation_steps=2,
-        dataloader_num_workers=4, # Su Windows dà errore, mettere 0
         num_train_epochs=num_epochs,
         weight_decay=weight_decay,
         max_grad_norm=1.0,
@@ -108,7 +105,7 @@ def main():
         compute_metrics=custom_metrics_fn,
         processing_class=tokenizer,
         data_collator=RobustDataCollator(tokenizer, model=model),
-        callbacks=[EarlyStoppingCallback(early_stopping_patience=4)],
+        callbacks=[EarlyStoppingCallback(early_stopping_patience=4), EvaluationLogCallback()],
         target_token_ids=target_token_ids 
     )
     
@@ -120,6 +117,7 @@ def main():
     print(f"PrinterCallback presente: {is_printer_present}")
 
     trainer.remove_callback(PrinterCallback)
+    trainer.remove_callback(ProgressCallback)
     print("Avvio Training...")
     trainer.train()
     

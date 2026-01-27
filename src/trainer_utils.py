@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 from dataclasses import dataclass, field
-from transformers import Seq2SeqTrainer, DataCollatorForSeq2Seq, Seq2SeqTrainingArguments
+from transformers import Seq2SeqTrainer, DataCollatorForSeq2Seq, Seq2SeqTrainingArguments, TrainerCallback
 from scipy.stats import spearmanr
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
@@ -106,3 +106,13 @@ def compute_metrics(eval_pred, acc_weight=0.7, spearman_weight=0.3):
         "spearman": float(rho),
         "combined_score": float(combined_score)
     }
+
+class EvaluationLogCallback(TrainerCallback):
+    """Mostra i risultati solo al termine della valutazione."""
+    def on_evaluate(self, args, state, control, metrics=None, **kwargs):
+        if metrics:
+            print(f"\n--- Risultati Evaluation (Step {state.global_step}) ---")
+            for key, value in metrics.items():
+                if key != "epoch": # Evita di ripetere l'epoca se non necessario
+                    print(f"{key}: {value:.4f}")
+            print("-" * 40 + "\n")
