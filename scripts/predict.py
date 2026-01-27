@@ -51,7 +51,7 @@ def main():
                 
                 result = {
                     "instance_id": int(sample_id),
-                    "prediction": format(score, '.2f')
+                    "prediction": round(score, 3)
                 }
     
                 f_out.write(json.dumps(result) + "\n")
