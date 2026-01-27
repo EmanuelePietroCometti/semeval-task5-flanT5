@@ -6,4 +6,3 @@ scipy
 wandb
 numpy
 pandas
-torch

@@ -22,7 +22,7 @@ def main():
 
     model, tokenizer = load_inference_model(BASE_MODEL_ID, LORA_MODEL_PATH)
     
-    # Identifica gli ID dei token target (1, 2, 3, 4, 5)
+    # Identificazione ID dei token target (1, 2, 3, 4, 5)
     target_token_ids = [tokenizer.encode(str(i), add_special_tokens=False)[0] for i in range(1, 6)]
     target_token_ids_tensor = torch.tensor(target_token_ids, device=model.device)
 

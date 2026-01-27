@@ -1,8 +1,6 @@
-# train.py
 import sys
 import os
 import torch
-# Aggiungi la root al path per importare src
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from transformers import Seq2SeqTrainingArguments, EarlyStoppingCallback
@@ -24,7 +22,7 @@ def main():
     tokenize_fn = get_tokenize_function(tokenizer)
     print("Tokenizing datasets...")
     tokenize_fn = get_tokenize_function(tokenizer)
-    
+
     column_names = train_ds.column_names
     
     train_encoded = train_ds.map(
@@ -43,26 +41,26 @@ def main():
     # Token IDs per i numeri "1", "2", "3", "4", "5"
     target_token_ids = [tokenizer.encode(str(i), add_special_tokens=False)[0] for i in range(1, 6)]
 
-    # 2. Configurazione Training
+    # Configurazione Training
     batch_size = 4
     num_epochs = 10
     learning_rate = 2e-4
     weight_decay = 0.01
 
     training_args = Seq2SeqTrainingArguments(
-        output_dir="./outputs/models/flan_t5_lora", # Usa un path coerente
+        output_dir="./outputs/models/flan_t5_lora",
         eval_strategy="steps",
         save_strategy="steps",
         eval_steps=100,
         save_steps=100,
         lr_scheduler_type="cosine",
         warmup_ratio=0.01,
-        optim="adafactor", # Ottimo per T5
+        optim="adafactor",
         learning_rate=learning_rate,
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size,
         gradient_accumulation_steps=2,
-        dataloader_num_workers=4, # OK su Colab. Se su Windows dà errore, metti 0
+        dataloader_num_workers=4, # Su Windows dà errore, mettere 0
         num_train_epochs=num_epochs,
         weight_decay=weight_decay,
         logging_dir="./logs",
@@ -73,14 +71,12 @@ def main():
         metric_for_best_model="accuracy_within_std",
         greater_is_better=True,
         fp16=False,
-        bf16=torch.cuda.is_bf16_supported(), # Rilevamento automatico
-        
-        # --- PARAMETRI CRITICI MANCANTI NEL TUO SNIPPET ---
+        bf16=torch.cuda.is_bf16_supported(),
         label_names=["labels", "target_scores", "stdev"], 
-        remove_unused_columns=False  # IMPORTANTE: altrimenti cancella target_scores!
+        remove_unused_columns=False
     )
 
-    # 3. Inizializzazione Trainer
+    # Trainer
     trainer = ExpectedValueTrainer(
         model=model,
         args=training_args,
@@ -96,7 +92,7 @@ def main():
     print("Avvio Training...")
     trainer.train()
     
-    # 7. Save
+    # Salvataggio modello
     trainer.save_model(OUTPUT_DIR)
     tokenizer.save_pretrained(OUTPUT_DIR)
     print(f"Model saved to {OUTPUT_DIR}")
