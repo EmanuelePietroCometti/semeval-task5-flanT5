@@ -50,8 +50,8 @@ def main():
                 )
                 
                 result = {
-                    "instance_id": sample_id,
-                    "prediction": score
+                    "instance_id": int(sample_id),
+                    "prediction": format(score, '.2f')
                 }
     
                 f_out.write(json.dumps(result) + "\n")
