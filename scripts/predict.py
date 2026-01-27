@@ -50,7 +50,7 @@ def main():
                 )
                 
                 result = {
-                    "instance_id": int(sample_id),
+                    "id": sample_id,
                     "prediction": round(score, 3)
                 }
     
