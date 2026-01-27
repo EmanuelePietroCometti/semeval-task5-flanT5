@@ -69,7 +69,7 @@ def main():
         logging_steps=20,
         log_level="error", 
         disable_tqdm=False,
-        report_to="wandb",
+        report_to="none",
         lr_scheduler_type="cosine",
         warmup_ratio=0.01,
         optim="adafactor",
