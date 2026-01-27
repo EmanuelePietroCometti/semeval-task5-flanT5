@@ -123,7 +123,7 @@ def main():
     trainer.train()
     
     print("-- Avvio Evaluation --")
-    eval = trainer.eval()
+    eval = trainer.evaluate()
     print("Accuracy within std:", eval.get("eval_accuracy_within_std", "N/A"))
     print("Spearman:", eval.get("eval_spearman", "N/A"))
 
