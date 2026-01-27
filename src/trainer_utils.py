@@ -34,7 +34,7 @@ class ExpectedValueTrainer(Seq2SeqTrainer):
                 optimizer if optimizer is not None else self.optimizer,
                 mode='max',
                 factor=0.5,
-                patience=4,
+                patience=2,
                 threshold=0.0001,
             )
         return self.lr_scheduler

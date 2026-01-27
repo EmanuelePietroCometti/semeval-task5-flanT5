@@ -68,7 +68,7 @@ def main():
         logging_strategy="steps",
         logging_steps=20,
         disable_tqdm=False,
-        report_to="none",
+        report_to="wandb",
         lr_scheduler_type="cosine",
         warmup_ratio=0.01,
         optim="adafactor",
@@ -119,8 +119,14 @@ def main():
 
     trainer.remove_callback(PrinterCallback)
     trainer.remove_callback(ProgressCallback)
-    print("Avvio Training...")
+    print("-- Avvio Training --")
     trainer.train()
+    
+    print("-- Avvio Evaluation --")
+    eval = trainer.eval()
+    print("Accuracy within std:", eval.get("eval_accuracy_within_std", "N/A"))
+    print("Spearman:", eval.get("eval_spearman", "N/A"))
+
     
     # Salvataggio modello
     trainer.save_model(OUTPUT_DIR)
