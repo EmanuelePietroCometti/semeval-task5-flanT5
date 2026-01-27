@@ -8,3 +8,4 @@ outputs/predictions/
 wandb/
 .env
 poetry.lock
+outputs/
