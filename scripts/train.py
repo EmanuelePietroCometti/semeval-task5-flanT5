@@ -6,10 +6,15 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 import warnings
+import logging
 warnings.filterwarnings("ignore")
 import torch
 from functools import partial
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+warnings.filterwarnings("ignore")
+logging.getLogger("transformers").setLevel(logging.ERROR)
+logging.getLogger("datasets").setLevel(logging.ERROR)
 
 from transformers import EarlyStoppingCallback
 from transformers.trainer_callback import PrinterCallback
@@ -78,6 +83,8 @@ def main():
         max_grad_norm=1.0,
         predict_with_generate=False,
         load_best_model_at_end=True,
+        acc_weight=0.7,
+        spearman_weight=0.3,
         metric_for_best_model="combined_score",
         greater_is_better=True,
         fp16=False,
@@ -104,7 +111,13 @@ def main():
         callbacks=[EarlyStoppingCallback(early_stopping_patience=4)],
         target_token_ids=target_token_ids 
     )
+    
 
+    for callback in trainer.callback_handler.callbacks:
+        print(type(callback).__name__)
+
+    is_printer_present = any(isinstance(c, PrinterCallback) for c in trainer.callback_handler.callbacks)
+    print(f"PrinterCallback presente: {is_printer_present}")
 
     trainer.remove_callback(PrinterCallback)
     print("Avvio Training...")
