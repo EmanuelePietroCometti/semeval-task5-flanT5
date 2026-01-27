@@ -108,11 +108,31 @@ def compute_metrics(eval_pred, acc_weight=0.7, spearman_weight=0.3):
     }
 
 class EvaluationLogCallback(TrainerCallback):
-    """Mostra i risultati solo al termine della valutazione."""
+    """Mostra i risultati dell'evaluation in una tabella pulita con combined score."""
+    def __init__(self):
+        self.header_printed = False
+
     def on_evaluate(self, args, state, control, metrics=None, **kwargs):
         if metrics:
-            print(f"\n--- Risultati Evaluation (Step {state.global_step}) ---")
-            for key, value in metrics.items():
-                if key != "epoch": # Evita di ripetere l'epoca se non necessario
-                    print(f"{key}: {value:.4f}")
-            print("-" * 40 + "\n")
+            train_loss = "N/A"
+            for log in reversed(state.log_history):
+                if "loss" in log:
+                    train_loss = f"{log['loss']:.4f}"
+                    break
+
+            step = state.global_step
+            eval_loss = metrics.get("eval_loss", 0.0)
+            acc = metrics.get("eval_accuracy_within_std", 0.0)
+            spearman = metrics.get("eval_spearman", 0.0)
+            combined = metrics.get("eval_combined_score", 0.0)
+
+            header = f"{'Step':<8} | {'Train Loss':<12} | {'Eval Loss':<12} | {'Acc':<10} | {'Spearman':<10} | {'Combined':<10}"
+            separator = "-" * len(header)
+            row = f"{step:<8} | {train_loss:<12} | {eval_loss:<12.4f} | {acc:<10.4f} | {spearman:<10.4f} | {combined:<10.4f}"
+
+            if not self.header_printed:
+                print(f"\n{header}")
+                print(separator)
+                self.header_printed = True
+
+            print(row, flush=True)
