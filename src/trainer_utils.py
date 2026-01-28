@@ -65,8 +65,8 @@ class ExpectedValueTrainer(Seq2SeqTrainer):
             mse_raw = (preds_cont - target_scores) ** 2
             weighted_mse_loss = (mse_raw * loss_weights).mean()
 
-            # Loss finale bilanciata (0.4 CE + 0.6 Weighted MSE)
-            total_loss = (0.4 * ce_loss) + (0.6 * weighted_mse_loss)
+            # Loss finale bilanciata (0.1 CE + 0.9 Weighted MSE)
+            total_loss = (0.1 * ce_loss) + (0.9 * weighted_mse_loss)
         else:
             total_loss = ce_loss
 
