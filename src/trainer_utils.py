@@ -41,23 +41,32 @@ class ExpectedValueTrainer(Seq2SeqTrainer):
 
     def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None, **kwargs):
         target_scores = inputs.pop("target_scores", None)
-        inputs.pop("stdev", None) 
+        stdevs = inputs.pop("stdev", None) # Recuperiamo lo stdev
 
         outputs = model(**inputs)
         ce_loss = outputs.loss
 
+        # Estrazione logit e calcolo valore atteso (come già presente)
         logits = outputs.logits[:, 0, :].to(torch.float32)
         relevant_logits = logits[:, self.target_token_ids]
-        relevant_logits = torch.clamp(relevant_logits, min=-100, max=100)
-
         probs = torch.nn.functional.softmax(relevant_logits, dim=-1)
-        weights = torch.tensor([1.0, 2.0, 3.0, 4.0, 5.0], device=logits.device, dtype=torch.float32)
-        preds_cont = torch.sum(probs * weights, dim=-1)
+        weights_val = torch.tensor([1.0, 2.0, 3.0, 4.0, 5.0], device=logits.device, dtype=torch.float32)
+        preds_cont = torch.sum(probs * weights_val, dim=-1)
 
-        if target_scores is not None:
+        if target_scores is not None and stdevs is not None:
             target_scores = target_scores.to(model.device)
-            mse_loss = torch.nn.functional.mse_loss(preds_cont, target_scores)
-            total_loss = (0.4 * ce_loss) + (0.6 * mse_loss)
+            stdevs = stdevs.to(model.device)
+
+            # Calcolo dei pesi: 1 / (stdev + epsilon)
+            # Riduce l'impatto dei campioni "rumorosi"
+            loss_weights = 1.0 / (stdevs + 0.1)
+            
+            # MSE pesata
+            mse_raw = (preds_cont - target_scores) ** 2
+            weighted_mse_loss = (mse_raw * loss_weights).mean()
+
+            # Loss finale bilanciata (0.4 CE + 0.6 Weighted MSE)
+            total_loss = (0.4 * ce_loss) + (0.6 * weighted_mse_loss)
         else:
             total_loss = ce_loss
 
