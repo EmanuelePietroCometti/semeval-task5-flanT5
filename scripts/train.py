@@ -83,8 +83,8 @@ def main():
         load_best_model_at_end=True,
         acc_weight=0.7,
         spearman_weight=0.3,
-        metric_for_best_model="eval_loss",
-        greater_is_better=False,
+        metric_for_best_model="combined_score",
+        greater_is_better=True,
         fp16=False,
         bf16=torch.cuda.is_bf16_supported(),
         label_names=["labels", "target_scores", "stdev"], 
@@ -106,7 +106,7 @@ def main():
         compute_metrics=custom_metrics_fn,
         processing_class=tokenizer,
         data_collator=RobustDataCollator(tokenizer, model=model),
-        callbacks=[EarlyStoppingCallback(early_stopping_patience=4), EvaluationLogCallback()],
+        callbacks=[EarlyStoppingCallback(early_stopping_patience=5), EvaluationLogCallback()],
         target_token_ids=target_token_ids 
     )
     
