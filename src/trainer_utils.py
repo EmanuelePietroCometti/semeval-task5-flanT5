@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from transformers import Seq2SeqTrainer, DataCollatorForSeq2Seq, Seq2SeqTrainingArguments, TrainerCallback
 from scipy.stats import spearmanr
 from torch.optim.lr_scheduler import ReduceLROnPlateau
+import torch.nn.functional as F
 
 @dataclass
 class CustomSeq2SeqTrainingArguments(Seq2SeqTrainingArguments):
@@ -39,17 +40,23 @@ class ExpectedValueTrainer(Seq2SeqTrainer):
             )
         return self.lr_scheduler
 
+
+    # All'interno di ExpectedValueTrainer
     def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None, **kwargs):
         target_scores = inputs.pop("target_scores", None)
-        stdevs = inputs.pop("stdev", None) # Recuperiamo lo stdev
+        stdevs = inputs.pop("stdev", None)
 
         outputs = model(**inputs)
-        ce_loss = outputs.loss
-
-        # Estrazione logit e calcolo valore atteso (come già presente)
+        
+        # Estrazione Logit e Probabilità del Modello
         logits = outputs.logits[:, 0, :].to(torch.float32)
         relevant_logits = logits[:, self.target_token_ids]
-        probs = torch.nn.functional.softmax(relevant_logits, dim=-1)
+        
+        # Per la KL, il modello deve fornire log_softmax
+        log_probs = F.log_softmax(relevant_logits, dim=-1)
+        # Per la MSE, usiamo le probabilità classiche
+        probs = F.softmax(relevant_logits, dim=-1)
+        
         weights_val = torch.tensor([1.0, 2.0, 3.0, 4.0, 5.0], device=logits.device, dtype=torch.float32)
         preds_cont = torch.sum(probs * weights_val, dim=-1)
 
@@ -57,18 +64,35 @@ class ExpectedValueTrainer(Seq2SeqTrainer):
             target_scores = target_scores.to(model.device)
             stdevs = stdevs.to(model.device)
 
-            # Calcolo dei pesi: 1 / (stdev + epsilon)
-            # Riduce l'impatto dei campioni "rumorosi"
-            loss_weights = 1.0 / (stdevs + 0.1)
+            # --- CALCOLO DISTRIBUZIONE TARGET (Soft Labels) ---
+            # Creiamo un range [1, 5] per ogni esempio nel batch
+            voti = torch.tensor([1.0, 2.0, 3.0, 4.0, 5.0], device=model.device)
+            mu = target_scores.unsqueeze(1)    # Shape: [batch, 1]
+            sigma = stdevs.unsqueeze(1) + 0.1  # Aggiungiamo epsilon per stabilità
             
-            # MSE pesata
+            # Formula Gaussiana: exp(-0.5 * ((x - mu) / sigma)^2)
+            target_dist = torch.exp(-0.5 * ((voti - mu) / sigma) ** 2)
+            # Normalizzazione per sommare a 1
+            target_dist = target_dist / target_dist.sum(dim=-1, keepdim=True)
+
+            # --- CALCOLO LOSS ---
+            # KL Divergence (confronta le distribuzioni)
+            # Nota: F.kl_div richiede log_probs in input e target_dist come target
+            kl_loss = F.kl_div(log_probs, target_dist, reduction='batchmean')
+
+            # Weighted MSE (confronta le medie)
+            loss_weights = 1.0 / (stdevs + 0.1)
             mse_raw = (preds_cont - target_scores) ** 2
             weighted_mse_loss = (mse_raw * loss_weights).mean()
 
-            # Loss finale bilanciata (0.1 CE + 0.9 Weighted MSE)
-            total_loss = (0.1 * ce_loss) + (0.9 * weighted_mse_loss)
+            # --- COMBINAZIONE ---
+            # Bilanciamento: 70% KL (forma) + 30% MSE (valore puntuale)
+            alpha = 0.7
+            beta = 0.3
+            total_loss = (alpha * kl_loss) + (beta * weighted_mse_loss)
+            
         else:
-            total_loss = ce_loss
+            total_loss = outputs.loss # Fallback alla CrossEntropy standard
 
         return (total_loss, outputs) if return_outputs else total_loss
 
