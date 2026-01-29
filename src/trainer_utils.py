@@ -87,8 +87,8 @@ class ExpectedValueTrainer(Seq2SeqTrainer):
 
             # --- COMBINAZIONE ---
             # Bilanciamento: 70% KL (forma) + 30% MSE (valore puntuale)
-            alpha = 0.7
-            beta = 0.3
+            alpha = 0.3
+            beta = 0.7
             total_loss = (alpha * kl_loss) + (beta * weighted_mse_loss)
             
         else:
