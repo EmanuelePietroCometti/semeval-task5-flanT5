@@ -1,16 +1,26 @@
 import json
 from datasets import Dataset
 
-def build_prompt_text(precontext, sentence, ending, homonym, judged_meaning):
+def build_prompt_text(precontext, sentence, ending, homonym, judged_meaning, example_sentence):
     story = f"Context: {precontext}\nAmbiguous Sentence: {sentence}\nEnding: {ending}"
     query = (
-        f"Task: Rate the plausibility of the word sense for the homonym in the story.\n"
-        f"Scale: 1 (not plausible) to 5 (very plausible).\n\n"
-        f"Story: {story}\n"
-        f"Homonym: {homonym}\n"
-        f"Sense to evaluate: {judged_meaning}\n"
-        f"Constraint: Respond only with a single integer between 1 and 5.\n"
-        f"Answer: "
+        f"### INSTRUCTIONS\n"
+        f"Task: You are an expert linguistic annotator. Your task is to rate the plausibility of a specific word sense within a story on a continuous scale from 1.0 to 5.0\n"
+        f"### INPUT DATA\n"
+        f"Story:\n{story}\n"
+        f"Target word: {homonym}\n"
+        f"Proposed Meaning: {judged_meaning}\n"
+        f"Sense Example: {example_sentence}\n"
+        f"### CRITERIA\n"
+        f"use this precise scale:\n"
+        f"1 = The sense is completely impossible or contradicts the story.\n"
+        f"2 = The sense is unlikely or does not fit well.\n"
+        f"3 = The sense is ambiguous or partially fits.\n"  
+        f"4 = The sense is plausible and fits the story.\n"
+        f"5 =  The sense is perfectly natural and implied by the story..\n\n"
+        f"Format: Provide only the numerical score."
+        f"### RATING\n"
+        f"Value: "
     )
     # Prompt Repetition
     full_prompt = f"{query}\n\nLet me repeat that:\n\n{query}"
@@ -31,10 +41,10 @@ def load_datasets(train_path, dev_path):
 def get_tokenize_function(tokenizer, max_length=512):
     def tokenize_function(batch):
         prompts = [
-            build_prompt_text(p, s, e, h, j)
-            for p, s, e, h, j in zip(
+            build_prompt_text(p, s, e, h, j, e)
+            for p, s, e, h, j, e in zip(
                 batch["precontext"], batch["sentence"], batch["ending"], 
-                batch["homonym"], batch["judged_meaning"]
+                batch["homonym"], batch["judged_meaning"], batch["example_sentence"]
             )
         ]
         
