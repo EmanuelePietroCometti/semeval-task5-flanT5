@@ -33,7 +33,7 @@ def main():
     model = apply_lora_config(model)
     
     print("Tokenizing datasets...")
-    tokenize_fn = get_tokenize_function(tokenizer)
+    tokenize_fn = get_tokenize_function(tokenizer, max_length=1024)
 
     column_names = train_ds.column_names
     
