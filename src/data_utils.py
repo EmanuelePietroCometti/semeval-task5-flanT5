@@ -4,21 +4,17 @@ from datasets import Dataset
 def build_prompt_text(precontext, sentence, ending, homonym, judged_meaning, example_sentence):
     story = f"Context: {precontext}\nAmbiguous Sentence: {sentence}\nEnding: {ending}"
     query = (
-        f"Task: You are an expert linguistic annotator. Your task is to rate the plausibility of a specific word sense within a story on a continuous scale from 1 to 5\n\n"
-        f"Story:\n{story}\n\n"
-        f"Target word: {homonym}\n"
-        f"Proposed Meaning: {judged_meaning}\n"
+        f"Task: I want you to act as an expert linguistic annotator. Rate the plausibility of the word sense for the homonym in the story.\n"
+        f"Scale: 1 (not plausible) to 5 (very plausible).\n\n"
+        f"Story: {story}\n"
+        f"Homonym: {homonym}\n"
+        f"Sense to evaluate: {judged_meaning}\n"
         f"Sense Example: {example_sentence}\n\n"
-        f"Rating criteria:\n"
-        f"1 = The sense is completely impossible or contradicts the story.\n"
-        f"2 = The sense is unlikely or does not fit well.\n"
-        f"3 = The sense is ambiguous or partially fits.\n"  
-        f"4 = The sense is plausible and fits the story.\n"
-        f"5 =  The sense is perfectly natural and implied by the story..\n\n"
+        f"Constraint: Respond only with a single integer between 1 and 5.\n\n"
         f"Answer: "
     )
     # Prompt Repetition
-    full_prompt = f"{query}\n\nLet me repeat that:\n\n{query}"
+    full_prompt = f"{query}"
     return full_prompt
 
 # Funzione per caricare i JSON in Dataset HuggingFace
