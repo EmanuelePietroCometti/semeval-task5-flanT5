@@ -46,7 +46,6 @@ def main():
                     ending=example["ending"],
                     homonym=example["homonym"],
                     judged_meaning=example["judged_meaning"],
-                    example_sentence=example["example_sentence"],
                     target_token_ids=target_token_ids_tensor
                 )
                 

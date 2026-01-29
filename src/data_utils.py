@@ -1,15 +1,14 @@
 import json
 from datasets import Dataset
 
-def build_prompt_text(precontext, sentence, ending, homonym, judged_meaning, example_sentence):
+def build_prompt_text(precontext, sentence, ending, homonym, judged_meaning):
     story = f"Context: {precontext}\nAmbiguous Sentence: {sentence}\nEnding: {ending}"
     query = (
-        f"Task: Rate the plausibility of the word sense for the homonym in the story.\n"
+        f"Task: I want you to act as an expert linguistic annotator. Rate the plausibility of the word sense for the homonym in the story.\n"
         f"Scale: 1 (not plausible) to 5 (very plausible).\n\n"
         f"Story: {story}\n"
         f"Homonym: {homonym}\n"
-        f"Sense to evaluate: {judged_meaning}\n"
-        f"Sense Example: {example_sentence}\n\n"
+        f"Sense to evaluate: {judged_meaning}\n\n"
         f"Constraint: Respond only with a single integer between 1 and 5.\n"
         f"Answer: "
     )

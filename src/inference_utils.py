@@ -24,11 +24,11 @@ def load_inference_model(base_model_name, lora_model_path):
     
     return model, tokenizer
 
-def get_prediction(model, tokenizer, precontext, sentence, ending, homonym, judged_meaning, example_sentence, target_token_ids):
+def get_prediction(model, tokenizer, precontext, sentence, ending, homonym, judged_meaning, target_token_ids):
     """
     Esegue l'inferenza su un singolo esempio e restituisce il valore continuo (float).
     """
-    prompt = build_prompt_text(precontext, sentence, ending, homonym, judged_meaning, example_sentence)
+    prompt = build_prompt_text(precontext, sentence, ending, homonym, judged_meaning)
     inputs = tokenizer(prompt, return_tensors="pt", truncation=True, max_length=512).to(model.device)
 
     decoder_input_ids = torch.tensor([[model.config.pad_token_id]], device=model.device)
