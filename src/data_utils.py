@@ -31,10 +31,10 @@ def load_datasets(train_path, dev_path):
 def get_tokenize_function(tokenizer, max_length=512):
     def tokenize_function(batch):
         prompts = [
-            build_prompt_text(p, s, e, h, j, e)
-            for p, s, e, h, j, e in zip(
+            build_prompt_text(p, s, e, h, js)
+            for p, s, e, h, js in zip(
                 batch["precontext"], batch["sentence"], batch["ending"], 
-                batch["homonym"], batch["judged_meaning"], batch["example_sentence"]
+                batch["homonym"], batch["judged_meaning"]
             )
         ]
         
