@@ -7,4 +7,3 @@ wandb
 numpy
 pandas
 tqdm
-bitsandbytes

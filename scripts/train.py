@@ -116,7 +116,7 @@ def main():
         load_best_model_at_end=True,
         greater_is_better=True,
         fp16=False,
-        bf16=torch.cuda.is_bf16_supported(),
+        bf16=False,
         label_names=["labels", "target_scores", "stdev"], 
         remove_unused_columns=False,
         ce_weight=args.ce_weight,
