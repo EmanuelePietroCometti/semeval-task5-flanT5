@@ -57,7 +57,13 @@ def main():
     train_ds, dev_ds = load_datasets(train_file, dev_file)
     
     model, tokenizer = load_base_model(config['model']['base_model'])
-    model = apply_lora_config(model)
+    model = apply_lora_config(
+        model, 
+        r=config['model']['lora_r'], 
+        alpha=config['model']['lora_alpha'], 
+        dropout=config['model']['lora_dropout'], 
+        target_modules=config['model']['target_modules']
+    )
     
     print("Tokenizing datasets...")
     tokenize_fn = get_tokenize_function(tokenizer, args.max_length)
