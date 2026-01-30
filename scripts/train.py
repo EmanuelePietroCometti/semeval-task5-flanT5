@@ -18,7 +18,7 @@ logging.getLogger("transformers").setLevel(logging.ERROR)
 logging.getLogger("datasets").setLevel(logging.ERROR)
 
 from transformers import EarlyStoppingCallback
-from transformers.trainer_callback import PrinterCallback, ProgressCallback
+from transformers.trainer_callback import DefaultFlowCallback
 from src.data_utils import load_datasets, get_tokenize_function
 from src.model_utils import load_base_model, apply_lora_config
 from src.trainer_utils import ExpectedValueTrainer, RobustDataCollator, compute_metrics, CustomSeq2SeqTrainingArguments, EvaluationLogCallback, MasterProgressCallback
@@ -145,7 +145,7 @@ def main():
         target_token_ids=target_token_ids 
     )
 
-    keep_callbacks = ["EarlyStoppingCallback", "EvaluationLogCallback", "MasterProgressCallback", "WandbCallback"]
+    keep_callbacks = ["EarlyStoppingCallback", "EvaluationLogCallback", "MasterProgressCallback", "WandbCallback", "DefaultFlowCallback"]
     
     for cb in trainer.callback_handler.callbacks.copy():
         if type(cb).__name__ not in keep_callbacks:
