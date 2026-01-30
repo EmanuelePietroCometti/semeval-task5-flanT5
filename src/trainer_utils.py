@@ -1,11 +1,20 @@
 import torch
 import numpy as np
 from dataclasses import dataclass, field
-from transformers import Seq2SeqTrainer, DataCollatorForSeq2Seq, Seq2SeqTrainingArguments, TrainerCallback
+from transformers import Seq2SeqTrainer, DataCollatorForSeq2Seq, Seq2SeqTrainingArguments, TrainerCallback, ProgressCallback
 from scipy.stats import spearmanr
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 import torch.nn.functional as F
 from tqdm.auto import tqdm
+
+
+class QuietProgressCallback(ProgressCallback):
+    """Mantiene la barra di avanzamento ma zittisce i log testuali."""
+    def on_log(self, args, state, control, logs=None, **kwargs):
+        # Sovrascrivendo on_log ed eliminando il super().on_log(logs),
+        # impediamo alla barra di stampare i dizionari di log o di 
+        # aggiornare la descrizione con testo fastidioso.
+        pass
 
 @dataclass
 class CustomSeq2SeqTrainingArguments(Seq2SeqTrainingArguments):

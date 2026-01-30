@@ -141,11 +141,17 @@ def main():
         compute_metrics=custom_metrics_fn,
         processing_class=tokenizer,
         data_collator=RobustDataCollator(tokenizer, model=model),
-        callbacks=[EarlyStoppingCallback(early_stopping_patience=args.early_stopping_patience), EvaluationLogCallback()],
+        callbacks=[EarlyStoppingCallback(early_stopping_patience=args.early_stopping_patience), EvaluationLogCallback(), QuietProgressCallback()],
         target_token_ids=target_token_ids 
     )
 
     trainer.remove_callback(PrinterCallback)
+    trainer.remove_callback(ProgressCallback)
+    try:
+        from transformers.trainer_callback import NotebookProgressCallback
+        trainer.remove_callback(NotebookProgressCallback)
+    except ImportError:
+        pass
     print("-- Avvio Training --")
     
     trainer.train()
