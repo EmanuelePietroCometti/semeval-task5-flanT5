@@ -8,13 +8,33 @@ import torch.nn.functional as F
 from tqdm.auto import tqdm
 
 
-class QuietProgressCallback(ProgressCallback):
-    """Mantiene la barra di avanzamento ma zittisce i log testuali."""
+class MasterProgressCallback(ProgressCallback):
+    """Gestisce un'unica barra per il training e zittisce ogni altro log testuale."""
+    def __init__(self):
+        super().__init__()
+        self.training_bar = None
+
+    def on_train_begin(self, args, state, control, **kwargs):
+        self.training_bar = tqdm(total=state.max_steps, dynamic_ncols=True)
+        self.training_bar.set_description("Training")
+
+    def on_step_end(self, args, state, control, **kwargs):
+        if self.training_bar:
+            self.training_bar.update(1)
+            if len(state.log_history) > 0:
+                last_log = state.log_history[-1]
+                if "loss" in last_log:
+                    self.training_bar.set_postfix(loss=f"{last_log['loss']:.4f}")
+
     def on_log(self, args, state, control, logs=None, **kwargs):
-        # Sovrascrivendo on_log ed eliminando il super().on_log(logs),
-        # impediamo alla barra di stampare i dizionari di log o di 
-        # aggiornare la descrizione con testo fastidioso.
         pass
+
+    def on_prediction_step(self, args, state, control, **kwargs):
+        pass
+
+    def on_train_end(self, args, state, control, **kwargs):
+        if self.training_bar:
+            self.training_bar.close()
 
 @dataclass
 class CustomSeq2SeqTrainingArguments(Seq2SeqTrainingArguments):
