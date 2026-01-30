@@ -37,8 +37,7 @@ def main():
     argparser.add_argument("--spearman_weight", type=float, default=0.3, help="Peso per Spearman nella metrica combinata")
     argparser.add_argument("--early_stopping_patience", type=int, default=5, help="Numero di epoche senza miglioramento prima di fermarsi")
     argparser.add_argument("--max_length", type=int, default=1024, help="Lunghezza massima per il tokenizing")
-    argparser.add_argument("--ce_weight", type=float, default=0.2, help="Peso per la CrossEntropy nella loss combinata")
-    argparser.add_argument("--kl_weight", type=float, default=0.2, help="Peso per la KL Divergence nella loss combinata")
+    argparser.add_argument("--ce_weight", type=float, default=0.4, help="Peso per la CrossEntropy nella loss combinata")
     argparser.add_argument("--mse_weight", type=float, default=0.6, help="Peso per la MSE nella loss combinata")
     argparser.add_argument("--patience_lronplateau", type=int, default=2, help="Patience per ReduceLROnPlateau scheduler")
     argparser.add_argument("--threshold_lronplateau", type=float, default=0.005, help="Threshold per ReduceLROnPlateau scheduler")
@@ -119,7 +118,6 @@ def main():
         label_names=["labels", "target_scores", "stdev"], 
         remove_unused_columns=False,
         ce_weight=args.ce_weight,
-        kl_weight=args.kl_weight,
         mse_weight=args.mse_weight,
         patience_lronplateau=args.patience_lronplateau,
         disable_tqdm=True,

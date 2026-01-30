@@ -16,4 +16,4 @@ training:
   optimizer: "adafactor"
 
 paths:
-  output_dir: "./outputs/models/flan_t5_lora"
+  output_dir: "outputs/models/flan_t5_lora"

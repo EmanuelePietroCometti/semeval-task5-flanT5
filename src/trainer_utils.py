@@ -40,8 +40,7 @@ class MasterProgressCallback(ProgressCallback):
 class CustomSeq2SeqTrainingArguments(Seq2SeqTrainingArguments):
     acc_weight: float = field(default=0.7, metadata={"help": "Peso per l'accuracy"})
     spearman_weight: float = field(default=0.3, metadata={"help": "Peso per Spearman"})
-    ce_weight: float = field(default=0.2)
-    kl_weight: float = field(default=0.2)
+    ce_weight: float = field(default=0.4)
     mse_weight: float = field(default=0.6)
     patience_lronplateau: int = field(default=2)
     threshold_lronplateau: float = field(default=0.005)
@@ -83,50 +82,32 @@ class ExpectedValueTrainer(Seq2SeqTrainer):
 
         outputs = model(**inputs)
         
-        # Estrazione Logit e Probabilità del Modello
+        # 1. CrossEntropy Standard (già calcolata da T5 se passiamo i labels)
+        ce_loss = outputs.loss 
+
+        # 2. Estrazione probabilità per Regressione
         logits = outputs.logits[:, 0, :].to(torch.float32)
         relevant_logits = logits[:, self.target_token_ids]
-        
-        # Per la KL, il modello deve fornire log_softmax
-        log_probs = F.log_softmax(relevant_logits, dim=-1)
-        # Per la MSE, usiamo le probabilità classiche
         probs = F.softmax(relevant_logits, dim=-1)
         
+        # Calcolo valore atteso (1.0..5.0)
         weights_val = torch.tensor([1.0, 2.0, 3.0, 4.0, 5.0], device=logits.device, dtype=torch.float32)
         preds_cont = torch.sum(probs * weights_val, dim=-1)
 
-        if target_scores is not None and stdevs is not None:
+        if target_scores is not None:
             target_scores = target_scores.to(model.device)
             stdevs = stdevs.to(model.device)
 
-            # --- CALCOLO DISTRIBUZIONE TARGET (Soft Labels) ---
-            # Creiamo un range [1, 5] per ogni esempio nel batch
-            voti = torch.tensor([1.0, 2.0, 3.0, 4.0, 5.0], device=model.device)
-            mu = target_scores.unsqueeze(1)    # Shape: [batch, 1]
-            sigma = stdevs.unsqueeze(1) + 0.1  # Aggiungiamo epsilon per stabilità
-            
-            # Formula Gaussiana: exp(-0.5 * ((x - mu) / sigma)^2)
-            target_dist = torch.exp(-0.5 * ((voti - mu) / sigma) ** 2)
-            # Normalizzazione per sommare a 1
-            target_dist = target_dist / target_dist.sum(dim=-1, keepdim=True)
-
-            # --- CALCOLO LOSS ---
-            # KL Divergence (confronta le distribuzioni)
-            # Nota: F.kl_div richiede log_probs in input e target_dist come target
-            kl_loss = F.kl_div(log_probs, target_dist, reduction='batchmean')
-
-            # Weighted MSE (confronta le medie)
+            # Weighted MSE: più importanza agli esempi dove gli annotatori sono concordi (stdev bassa)
+            # Usiamo 1/(stdev + epsilon) come peso
             loss_weights = 1.0 / (stdevs + 0.1)
             mse_raw = (preds_cont - target_scores) ** 2
             weighted_mse_loss = (mse_raw * loss_weights).mean()
 
-            ce = outputs.loss
-            # --- COMBINAZIONE ---
-            # Bilanciamento: CE + KL (forma) + MSE (valore puntuale)
-            total_loss = (self.args.ce_weight*ce) + (self.args.kl_weight * kl_loss) + (self.args.mse_weight * weighted_mse_loss)
-            
+            # Combinazione bilanciata (es. 40% CE e 60% MSE)
+            total_loss = (0.4 * ce_loss) + (0.6 * weighted_mse_loss)
         else:
-            total_loss = outputs.loss # Fallback alla CrossEntropy standard
+            total_loss = ce_loss
 
         return (total_loss, outputs) if return_outputs else total_loss
 
