@@ -12,6 +12,7 @@ def load_base_model(model_name="google/flan-t5-xl"):
         model_name,
         load_in_8bit=True,
         device_map=device_map,
+        use_cache=False
     )
     return model, tokenizer
 
