@@ -27,10 +27,10 @@ def main():
     with open("config/config.yaml" , "r") as config_file:
         config = yaml.safe_load(config_file)
 
-    if not os.path.exists(config.output_dir):
-        raise FileNotFoundError(f"Non trovo il modello in {config.output_dir}. Hai lanciato train.py?")
+    if not os.path.exists(config['paths']['output_dir']):
+        raise FileNotFoundError(f"Non trovo il modello in {config['paths']['output_dir']}. Hai lanciato train.py?")
 
-    model, tokenizer = load_inference_model(config.base_model, config.output_dir)
+    model, tokenizer = load_inference_model(config['model']['base_model'], config['paths']['output_dir'])
     
     # Identificazione ID dei token target (1, 2, 3, 4, 5)
     target_token_ids = [tokenizer.encode(str(i), add_special_tokens=False)[0] for i in range(1, 6)]

@@ -29,7 +29,6 @@ def main():
     argparser = argparse.ArgumentParser(description="Training script for Flan-T5 with LoRA")
     argparser.add_argument("--train_file", type=str, default="data/raw/train.json", help="Percorso al file di training")
     argparser.add_argument("--dev_file", type=str, default="data/raw/dev.json", help="Percorso al file di sviluppo")
-    argparser.add_argument("--output_dir", type=str, default="outputs/models/flan_t5_lora", help="Directory di output per il modello salvato")
     argparser.add_argument("--batch_size", type=int, default=4, help="Batch size per dispositivo")
     argparser.add_argument("--num_epochs", type=int, default=10, help="Numero di epoche di training")
     argparser.add_argument("--learning_rate", type=float, default=2e-4, help="Learning rate per l'ottimizzatore")
@@ -50,7 +49,7 @@ def main():
     args = argparser.parse_args()
     train_file = args.train_file
     dev_file = args.dev_file
-    output_dir = args.output_dir
+    output_dir = config["paths"]["output_dir"]
 
     with open("config/config.yaml", 'r') as config_file:
         config = yaml.safe_load(config_file)
@@ -90,26 +89,26 @@ def main():
     training_args = CustomSeq2SeqTrainingArguments(
         # Parametri di percorso
         output_dir=output_dir,
-        eval_strategy=config.eval_strategy,
-        save_strategy=config.save_strategy,
-        eval_steps=config.eval_steps,
-        save_steps=config.save_steps,
-        logging_strategy=config.logging_strategy,
-        logging_steps=config.logging_steps,
+        eval_strategy=config['training']['eval_strategy'],
+        save_strategy=config['training']['save_strategy'],
+        eval_steps=config['training']['eval_steps'],
+        save_steps=config['training']['save_steps'],
+        logging_strategy=config['training']['logging_strategy'],
+        logging_steps=config['training']['logging_steps'],
 
         # Parametri di training
         num_train_epochs=args.num_epochs,
         per_device_train_batch_size=args.batch_size,
         per_device_eval_batch_size=args.batch_size,
-        gradient_accumulation_steps=config.gradient_accumulation_steps,
+        gradient_accumulation_steps=config['training']['gradient_accumulation_steps'],
         weight_decay=args.weight_decay,
         lr_scheduler_type=args.lr_scheduler,
         learning_rate=args.learning_rate,
-        warmup_ratio=config.warmup_ratio,
+        warmup_ratio=config['training']['warmup_ratio'],
         max_grad_norm=args.max_grad_norm,
         acc_weight=args.acc_weight,
         spearman_weight=args.spearman_weight,
-        optim=config.optimizer,
+        optim=config['training']['optimizer'],
 
         # Altri parametri
         metric_for_best_model="combined_score",
