@@ -34,7 +34,6 @@ def main():
     argparser.add_argument("--learning_rate", type=float, default=2e-4, help="Learning rate per l'ottimizzatore")
     argparser.add_argument("--weight_decay", type=float, default=0.01, help="Weight decay per l'ottimizzatore")
     argparser.add_argument("--lr_scheduler", type=str, default="cosine", help="Tipo di scheduler del learning rate")
-    argparser.add_argument("--learning_rate", type=float, default=2e-4, help="Learning rate per l'ottimizzatore")
     argparser.add_argument("--max_grad_norm", type=float, default=1.0, help="Massimo gradiente per il clipping")
     argparser.add_argument("--acc_weight", type=float, default=0.7, help="Peso per l'accuracy nella metrica combinata")
     argparser.add_argument("--spearman_weight", type=float, default=0.3, help="Peso per Spearman nella metrica combinata")
