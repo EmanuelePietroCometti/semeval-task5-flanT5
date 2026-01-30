@@ -9,7 +9,7 @@ from tqdm.auto import tqdm
 
 
 class MasterProgressCallback(ProgressCallback):
-    """Gestisce un'unica barra per il training e zittisce ogni altro log testuale."""
+    """Gestisce un'unica barra per il training evitando ogni altro log testuale."""
     def __init__(self):
         super().__init__()
         self.training_bar = None
@@ -40,8 +40,8 @@ class MasterProgressCallback(ProgressCallback):
 class CustomSeq2SeqTrainingArguments(Seq2SeqTrainingArguments):
     acc_weight: float = field(default=0.7, metadata={"help": "Peso per l'accuracy"})
     spearman_weight: float = field(default=0.3, metadata={"help": "Peso per Spearman"})
-    ce_weight: float = field(default=0.4)
-    mse_weight: float = field(default=0.6)
+    ce_weight: float = field(default=0.1)
+    mse_weight: float = field(default=0.9)
     patience_lronplateau: int = field(default=2)
     threshold_lronplateau: float = field(default=0.005)
 
@@ -105,7 +105,7 @@ class ExpectedValueTrainer(Seq2SeqTrainer):
             weighted_mse_loss = (mse_raw * loss_weights).mean()
 
             # Combinazione bilanciata (es. 40% CE e 60% MSE)
-            total_loss = (0.4 * ce_loss) + (0.6 * weighted_mse_loss)
+            total_loss = (self.args.ce_weight * ce_loss) + (self.args.mse_weight * weighted_mse_loss)
         else:
             total_loss = ce_loss
 
