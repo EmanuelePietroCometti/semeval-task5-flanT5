@@ -14,7 +14,6 @@ training:
   save_strategy: "steps"
   warmup_ratio: 0.01
   optimizer: "adafactor"
-  gradient_accumulation_steps: 8
 
 paths:
   output_dir: "./outputs/models/flan_t5_lora"

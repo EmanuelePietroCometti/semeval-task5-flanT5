@@ -42,6 +42,7 @@ def main():
     argparser.add_argument("--mse_weight", type=float, default=0.6, help="Peso per la MSE nella loss combinata")
     argparser.add_argument("--patience_lronplateau", type=int, default=2, help="Patience per ReduceLROnPlateau scheduler")
     argparser.add_argument("--threshold_lronplateau", type=float, default=0.005, help="Threshold per ReduceLROnPlateau scheduler")
+    argparser.add_argument("--gradient_accumulation_steps", type=int, default=1, help="Numero di step per l'accumulazione del gradiente")
 
     with open("config/config.yaml", 'r') as config_file:
         config = yaml.safe_load(config_file)
@@ -97,7 +98,7 @@ def main():
         num_train_epochs=args.num_epochs,
         per_device_train_batch_size=args.batch_size,
         per_device_eval_batch_size=args.batch_size,
-        gradient_accumulation_steps=config['training']['gradient_accumulation_steps'],
+        gradient_accumulation_steps=args.gradient_accumulation_steps,
         weight_decay=args.weight_decay,
         lr_scheduler_type=args.lr_scheduler,
         learning_rate=args.learning_rate,
