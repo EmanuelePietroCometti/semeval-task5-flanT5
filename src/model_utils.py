@@ -3,7 +3,7 @@ from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 from peft import LoraConfig, get_peft_model, TaskType
 import yaml
 
-def load_base_model(model_name="google/flan-t5-large"):
+def load_base_model(model_name="google/flan-t5-xl"):
     print(f"Loading model: {model_name}...")
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     

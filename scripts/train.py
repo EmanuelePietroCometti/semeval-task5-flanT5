@@ -56,7 +56,7 @@ def main():
    
     train_ds, dev_ds = load_datasets(train_file, dev_file)
     
-    model, tokenizer = load_base_model(config.base_model)
+    model, tokenizer = load_base_model(config['model']['base_model'])
     model = apply_lora_config(model)
     
     print("Tokenizing datasets...")

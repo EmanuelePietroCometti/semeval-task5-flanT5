@@ -1,5 +1,5 @@
 model:
-  base_model: "google/flan-t5-large"
+  base_model: "google/flan-t5-xl"
   lora_r: 16
   lora_alpha: 32
   lora_dropout: 0.1
