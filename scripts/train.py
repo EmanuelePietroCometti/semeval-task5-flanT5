@@ -2,6 +2,8 @@ import sys
 import os
 import sys
 import os
+import yaml
+import argparse
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
@@ -23,17 +25,43 @@ from src.model_utils import load_base_model, apply_lora_config
 from src.trainer_utils import ExpectedValueTrainer, RobustDataCollator, compute_metrics, CustomSeq2SeqTrainingArguments, EvaluationLogCallback
 
 def main():
-    TRAIN_FILE = "data/raw/train.json"
-    DEV_FILE = "data/raw/dev.json"
-    OUTPUT_DIR = "outputs/models/flan_t5_lora_v1"
+    argparser = argparse.ArgumentParser(description="Training script for Flan-T5 with LoRA")
+    argparser.add_argument("--train_file", type=str, default="data/raw/train.json", help="Percorso al file di training")
+    argparser.add_argument("--dev_file", type=str, default="data/raw/dev.json", help="Percorso al file di sviluppo")
+    argparser.add_argument("--output_dir", type=str, default="outputs/models/flan_t5_lora", help="Directory di output per il modello salvato")
+    argparser.add_argument("--batch_size", type=int, default=4, help="Batch size per dispositivo")
+    argparser.add_argument("--num_epochs", type=int, default=10, help="Numero di epoche di training")
+    argparser.add_argument("--learning_rate", type=float, default=2e-4, help="Learning rate per l'ottimizzatore")
+    argparser.add_argument("--weight_decay", type=float, default=0.01, help="Weight decay per l'ottimizzatore")
+    argparser.add_argument("--lr_scheduler", type=str, default="cosine", help="Tipo di scheduler del learning rate")
+    argparser.add_argument("--learning_rate", type=float, default=2e-4, help="Learning rate per l'ottimizzatore")
+    argparser.add_argument("--max_grad_norm", type=float, default=1.0, help="Massimo gradiente per il clipping")
+    argparser.add_argument("--acc_weight", type=float, default=0.7, help="Peso per l'accuracy nella metrica combinata")
+    argparser.add_argument("--spearman_weight", type=float, default=0.3, help="Peso per Spearman nella metrica combinata")
+    argparser.add_argument("--early_stopping_patience", type=int, default=5, help="Numero di epoche senza miglioramento prima di fermarsi")
+    argparser.add_argument("--max_length", type=int, default=1024, help="Lunghezza massima per il tokenizing")
+    argparser.add_argument("--ce_weight", type=float, default=0.2, help="Peso per la CrossEntropy nella loss combinata")
+    argparser.add_argument("--kl_weight", type=float, default=0.2, help="Peso per la KL Divergence nella loss combinata")
+    argparser.add_argument("--mse_weight", type=float, default=0.6, help="Peso per la MSE nella loss combinata")
+    argparser.add_argument("--patience_lronplateau", type=int, default=2, help="Patience per ReduceLROnPlateau scheduler")
+    argparser.add_argument("--threshold_lronplateau", type=float, default=0.005, help="Threshold per ReduceLROnPlateau scheduler")
+
+
+    args = argparser.parse_args()
+    train_file = args.train_file
+    dev_file = args.dev_file
+    output_dir = args.output_dir
+
+    with open("config/config.yaml", 'r') as config_file:
+        config = yaml.safe_load(config_file)
    
-    train_ds, dev_ds = load_datasets(TRAIN_FILE, DEV_FILE)
+    train_ds, dev_ds = load_datasets(train_file, dev_file)
     
-    model, tokenizer = load_base_model()
+    model, tokenizer = load_base_model(config.base_model)
     model = apply_lora_config(model)
     
     print("Tokenizing datasets...")
-    tokenize_fn = get_tokenize_function(tokenizer, max_length=1024)
+    tokenize_fn = get_tokenize_function(tokenizer, args.max_length)
 
     column_names = train_ds.column_names
     
@@ -53,42 +81,44 @@ def main():
     # Token IDs per i numeri "1", "2", "3", "4", "5"
     target_token_ids = [tokenizer.encode(str(i), add_special_tokens=False)[0] for i in range(1, 6)]
 
-    # Configurazione Training
-    batch_size = 4
-    num_epochs = 10
-    learning_rate = 2e-4
-    weight_decay = 0.01
-
     training_args = CustomSeq2SeqTrainingArguments(
-        output_dir="./outputs/models/flan_t5_lora",
-        eval_strategy="steps",
-        save_strategy="steps",
-        eval_steps=100,
-        save_steps=100,
-        logging_strategy="steps",
-        logging_steps=20,
-        disable_tqdm=False,
+        # Parametri di percorso
+        output_dir=output_dir,
+        eval_strategy=config.eval_strategy,
+        save_strategy=config.save_strategy,
+        eval_steps=config.eval_steps,
+        save_steps=config.save_steps,
+        logging_strategy=config.logging_strategy,
+        logging_steps=config.logging_steps,
+
+        # Parametri di training
+        num_train_epochs=args.num_epochs,
+        per_device_train_batch_size=args.batch_size,
+        per_device_eval_batch_size=args.batch_size,
+        gradient_accumulation_steps=config.gradient_accumulation_steps,
+        weight_decay=args.weight_decay,
+        lr_scheduler_type=args.lr_scheduler,
+        learning_rate=args.learning_rate,
+        warmup_ratio=config.warmup_ratio,
+        max_grad_norm=args.max_grad_norm,
+        acc_weight=args.acc_weight,
+        spearman_weight=args.spearman_weight,
+        optim=config.optimizer,
+
+        # Altri parametri
+        metric_for_best_model="combined_score",
         report_to="wandb",
-        lr_scheduler_type="cosine",
-        warmup_ratio=0.01,
-        optim="adafactor",
-        learning_rate=learning_rate,
-        per_device_train_batch_size=batch_size,
-        per_device_eval_batch_size=batch_size,
-        gradient_accumulation_steps=2,
-        num_train_epochs=num_epochs,
-        weight_decay=weight_decay,
-        max_grad_norm=1.0,
         predict_with_generate=False,
         load_best_model_at_end=True,
-        acc_weight=0.7,
-        spearman_weight=0.3,
-        metric_for_best_model="combined_score",
         greater_is_better=True,
         fp16=False,
         bf16=torch.cuda.is_bf16_supported(),
         label_names=["labels", "target_scores", "stdev"], 
-        remove_unused_columns=False
+        remove_unused_columns=False,
+        ce_weight=args.ce_weight,
+        kl_weight=args.kl_weight,
+        mse_weight=args.mse_weight,
+        patience_lronplateau=args.patience_lronplateau
     )
 
     custom_metrics_fn = partial(
@@ -106,7 +136,7 @@ def main():
         compute_metrics=custom_metrics_fn,
         processing_class=tokenizer,
         data_collator=RobustDataCollator(tokenizer, model=model),
-        callbacks=[EarlyStoppingCallback(early_stopping_patience=5), EvaluationLogCallback()],
+        callbacks=[EarlyStoppingCallback(early_stopping_patience=args.early_stopping_patience), EvaluationLogCallback()],
         target_token_ids=target_token_ids 
     )
     
@@ -120,8 +150,8 @@ def main():
     trainer.remove_callback(PrinterCallback)
     trainer.remove_callback(ProgressCallback)
     print("-- Avvio Training --")
-    trainer.train()
     
+    trainer.train()
     print("-- Avvio Evaluation --")
     eval = trainer.evaluate()
     print("Accuracy within std:", eval.get("eval_accuracy_within_std", "N/A"))
@@ -129,9 +159,9 @@ def main():
 
     
     # Salvataggio modello
-    trainer.save_model(OUTPUT_DIR)
-    tokenizer.save_pretrained(OUTPUT_DIR)
-    print(f"Model saved to {OUTPUT_DIR}")
+    trainer.save_model(output_dir)
+    tokenizer.save_pretrained(output_dir)
+    print(f"Model saved to {output_dir}")
 
 if __name__ == "__main__":
     main()

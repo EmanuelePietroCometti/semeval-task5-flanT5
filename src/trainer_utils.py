@@ -10,6 +10,11 @@ import torch.nn.functional as F
 class CustomSeq2SeqTrainingArguments(Seq2SeqTrainingArguments):
     acc_weight: float = field(default=0.7, metadata={"help": "Peso per l'accuracy"})
     spearman_weight: float = field(default=0.3, metadata={"help": "Peso per Spearman"})
+    ce_weight: float = field(default=0.2)
+    kl_weight: float = field(default=0.2)
+    mse_weight: float = field(default=0.6)
+    patience_lronplateau: int = field(default=2)
+    threshold_lronplateau: float = field(default=0.005)
 
 # Collator Custom
 class RobustDataCollator(DataCollatorForSeq2Seq):
@@ -35,7 +40,7 @@ class ExpectedValueTrainer(Seq2SeqTrainer):
                 optimizer if optimizer is not None else self.optimizer,
                 mode='max',
                 factor=0.5,
-                patience=2,
+                patience=self.args.patience_lronplateau,
                 threshold=0.005,
             )
         return self.lr_scheduler
@@ -85,11 +90,10 @@ class ExpectedValueTrainer(Seq2SeqTrainer):
             mse_raw = (preds_cont - target_scores) ** 2
             weighted_mse_loss = (mse_raw * loss_weights).mean()
 
+            ce = outputs.loss
             # --- COMBINAZIONE ---
-            # Bilanciamento: 70% KL (forma) + 30% MSE (valore puntuale)
-            alpha = 0.3
-            beta = 0.7
-            total_loss = (alpha * kl_loss) + (beta * weighted_mse_loss)
+            # Bilanciamento: CE + KL (forma) + MSE (valore puntuale)
+            total_loss = (self.args.ce_weight*ce) + (self.args.kl_weight * kl_loss) + (self.args.mse_weight * weighted_mse_loss)
             
         else:
             total_loss = outputs.loss # Fallback alla CrossEntropy standard

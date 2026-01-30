@@ -1,6 +1,7 @@
 import torch
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 from peft import LoraConfig, get_peft_model, TaskType
+import yaml
 
 def load_base_model(model_name="google/flan-t5-large"):
     print(f"Loading model: {model_name}...")
@@ -16,14 +17,16 @@ def load_base_model(model_name="google/flan-t5-large"):
     return model, tokenizer
 
 def apply_lora_config(model):
+    with open("config/config.yaml" , "r") as config_file:
+        config = yaml.safe_load(config_file)
     print("Applying LoRA config...")
     peft_config = LoraConfig(
         task_type=TaskType.SEQ_2_SEQ_LM,
         inference_mode=False,
-        r=16,           # Rank
-        lora_alpha=32,  # Alpha
-        lora_dropout=0.1,
-        target_modules=["q", "v", "wi_0", "wi_1", "wo", "lm_head"]
+        r=config.lora_r,
+        lora_alpha=config.lora_alpha,
+        lora_dropout=config.lora_dropout,
+        target_modules=config.lora_target_modules
     )
     model = get_peft_model(model, peft_config)
     model.print_trainable_parameters()

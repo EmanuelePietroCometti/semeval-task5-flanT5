@@ -1,0 +1,20 @@
+model:
+  base_model: "google/flan-t5-large"
+  lora_r: 16
+  lora_alpha: 32
+  lora_dropout: 0.1
+  target_modules: ["q", "v", "wi_0", "wi_1", "wo", "lm_head"]
+
+training:
+  eval_steps: 100
+  save_steps: 100
+  logging_steps: 20
+  logging_strategy: "steps"
+  eval_strategy: "steps"
+  save_strategy: "steps"
+  warmup_ratio: 0.01
+  optimizer: "adafactor"
+  gradient_accumulation_steps: 2
+
+path_
+  output_dir: "./outputs/models/flan_t5_lora"
