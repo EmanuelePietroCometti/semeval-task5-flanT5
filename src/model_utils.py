@@ -1,9 +1,15 @@
 import torch
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, BitsAndBytesConfig
 from peft import LoraConfig, get_peft_model, TaskType
 import yaml
 
 def load_base_model(model_name="google/flan-t5-xl"):
+    bnb_config = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_compute_dtype=torch.bfloat16, # o float16 se non supportato
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_use_double_quant=True,
+    )
     print(f"Loading model: {model_name}...")
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     
@@ -11,8 +17,8 @@ def load_base_model(model_name="google/flan-t5-xl"):
     
     model = AutoModelForSeq2SeqLM.from_pretrained(
         model_name,
+        quantization_config=bnb_config,
         device_map=device_map,
-        torch_dtype=torch.float32
     )
     return model, tokenizer
 
