@@ -5,6 +5,7 @@ from transformers import Seq2SeqTrainer, DataCollatorForSeq2Seq, Seq2SeqTraining
 from scipy.stats import spearmanr
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 import torch.nn.functional as F
+from tqdm.auto import tqdm
 
 @dataclass
 class CustomSeq2SeqTrainingArguments(Seq2SeqTrainingArguments):
@@ -168,8 +169,8 @@ class EvaluationLogCallback(TrainerCallback):
             row = f"{step:<8} | {train_loss:<12} | {eval_loss:<12.4f} | {acc:<10.4f} | {spearman:<10.4f} | {combined:<10.4f}"
 
             if not self.header_printed:
-                print(f"\n{header}")
-                print(separator)
+                tqdm.write(f"\n{header}") # Sostituisci print con tqdm.write
+                tqdm.write(separator)
                 self.header_printed = True
 
-            print(row, flush=True)
+            tqdm.write(row)

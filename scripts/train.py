@@ -1,7 +1,5 @@
 import sys
 import os
-import sys
-import os
 import yaml
 import argparse
 
@@ -123,7 +121,7 @@ def main():
         kl_weight=args.kl_weight,
         mse_weight=args.mse_weight,
         patience_lronplateau=args.patience_lronplateau,
-        disable_tqdm=True,
+        disable_tqdm=False,
         gradient_checkpointing=True,
     )
 
@@ -145,16 +143,8 @@ def main():
         callbacks=[EarlyStoppingCallback(early_stopping_patience=args.early_stopping_patience), EvaluationLogCallback()],
         target_token_ids=target_token_ids 
     )
-    
-
-    for callback in trainer.callback_handler.callbacks:
-        print(type(callback).__name__)
-
-    is_printer_present = any(isinstance(c, PrinterCallback) for c in trainer.callback_handler.callbacks)
-    print(f"PrinterCallback presente: {is_printer_present}")
 
     trainer.remove_callback(PrinterCallback)
-    trainer.remove_callback(ProgressCallback)
     print("-- Avvio Training --")
     
     trainer.train()
