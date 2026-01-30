@@ -7,6 +7,7 @@ import argparse
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "1"
 import warnings
 import logging
 warnings.filterwarnings("ignore")
@@ -123,7 +124,8 @@ def main():
         ce_weight=args.ce_weight,
         kl_weight=args.kl_weight,
         mse_weight=args.mse_weight,
-        patience_lronplateau=args.patience_lronplateau
+        patience_lronplateau=args.patience_lronplateau,
+        disable_tqdm=True
     )
 
     custom_metrics_fn = partial(
