@@ -122,7 +122,7 @@ def main():
         kl_weight=args.kl_weight,
         mse_weight=args.mse_weight,
         patience_lronplateau=args.patience_lronplateau,
-        disable_tqdm=False,
+        disable_tqdm=True,
         gradient_checkpointing=True,
     )
 
@@ -145,16 +145,15 @@ def main():
         target_token_ids=target_token_ids 
     )
 
-    trainer.remove_callback(PrinterCallback)
-    trainer.remove_callback(ProgressCallback)
-    try:
-        from transformers.trainer_callback import NotebookProgressCallback
-        trainer.remove_callback(NotebookProgressCallback)
-    except ImportError:
-        pass
-    print("-- Avvio Training --")
+    keep_callbacks = ["EarlyStoppingCallback", "EvaluationLogCallback", "MasterProgressCallback", "WandbCallback"]
     
+    for cb in trainer.callback_handler.callbacks.copy():
+        if type(cb).__name__ not in keep_callbacks:
+            trainer.remove_callback(cb)
+
+    print("-- Avvio Training Pulito (v5) --")
     trainer.train()
+
     print("-- Avvio Evaluation --")
     eval = trainer.evaluate()
     print("Accuracy within std:", eval.get("eval_accuracy_within_std", "N/A"))
