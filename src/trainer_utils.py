@@ -76,38 +76,50 @@ class ExpectedValueTrainer(Seq2SeqTrainer):
 
 
     # All'interno di ExpectedValueTrainer
+    # In src/trainer_utils.py
+
+# ... (imports rimangono uguali)
+
+class ExpectedValueTrainer(Seq2SeqTrainer):
+    def __init__(self, *args, target_token_ids=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.target_token_ids = target_token_ids
+        
+        # VERIFICA CRITICA: Stampa i token che stiamo tracciando
+        if self.target_token_ids:
+            print(f"DEBUG: Target Token IDs per 1-5: {self.target_token_ids}")
+
     def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None, **kwargs):
         target_scores = inputs.pop("target_scores", None)
         stdevs = inputs.pop("stdev", None)
 
         outputs = model(**inputs)
         
-        # 1. CrossEntropy Standard (già calcolata da T5 se passiamo i labels)
+        # CrossEntropy Standard
+        # Questa forza il modello a generare effettivamente i token numerici corretti
         ce_loss = outputs.loss 
-
-        # 2. Estrazione probabilità per Regressione
-        logits = outputs.logits[:, 0, :].to(torch.float32)
-        relevant_logits = logits[:, self.target_token_ids]
+        
+        logits = outputs.logits[:, 0, :].to(torch.float32) 
+        relevant_logits = logits[:, self.target_token_ids] 
+        
         probs = F.softmax(relevant_logits, dim=-1)
         
-        # Calcolo valore atteso (1.0..5.0)
         weights_val = torch.tensor([1.0, 2.0, 3.0, 4.0, 5.0], device=logits.device, dtype=torch.float32)
         preds_cont = torch.sum(probs * weights_val, dim=-1)
+
+        total_loss = ce_loss
 
         if target_scores is not None:
             target_scores = target_scores.to(model.device)
             stdevs = stdevs.to(model.device)
 
-            # Weighted MSE: più importanza agli esempi dove gli annotatori sono concordi (stdev bassa)
-            # Usiamo 1/(stdev + epsilon) come peso
-            loss_weights = 1.0 / (stdevs + 0.1)
+            # MSE pesato dall'incertezza degli annotatori
+            loss_weights = 1.0 / (stdevs + 0.5)
             mse_raw = (preds_cont - target_scores) ** 2
             weighted_mse_loss = (mse_raw * loss_weights).mean()
 
-            # Combinazione bilanciata (es. 40% CE e 60% MSE)
+            # La CE deve guidare l'apprendimento sintattico. La MSE raffina la semantica.
             total_loss = (self.args.ce_weight * ce_loss) + (self.args.mse_weight * weighted_mse_loss)
-        else:
-            total_loss = ce_loss
 
         return (total_loss, outputs) if return_outputs else total_loss
 
