@@ -11,10 +11,8 @@ def load_inference_model(base_model_name, lora_model_path):
     tokenizer = AutoTokenizer.from_pretrained(base_model_name)
     
     # Carica modello base
-    dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float32
     base_model = AutoModelForSeq2SeqLM.from_pretrained(
         base_model_name,
-        torch_dtype=dtype,
         device_map="auto"
     )
 
