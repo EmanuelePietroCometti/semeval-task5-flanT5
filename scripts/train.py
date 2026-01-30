@@ -21,7 +21,7 @@ from transformers import EarlyStoppingCallback
 from transformers.trainer_callback import PrinterCallback, ProgressCallback
 from src.data_utils import load_datasets, get_tokenize_function
 from src.model_utils import load_base_model, apply_lora_config
-from src.trainer_utils import ExpectedValueTrainer, RobustDataCollator, compute_metrics, CustomSeq2SeqTrainingArguments, EvaluationLogCallback
+from src.trainer_utils import ExpectedValueTrainer, RobustDataCollator, compute_metrics, CustomSeq2SeqTrainingArguments, EvaluationLogCallback, QuietProgressCallback
 
 def main():
     argparser = argparse.ArgumentParser(description="Training script for Flan-T5 with LoRA")
