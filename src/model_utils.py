@@ -18,7 +18,6 @@ def load_base_model(model_name="google/flan-t5-xl"):
         model_name,
         quantization_config=bnb_config,
         device_map=device_map,
-        use_cache=False
     )
     return model, tokenizer
 

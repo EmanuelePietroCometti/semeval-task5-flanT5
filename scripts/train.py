@@ -121,7 +121,6 @@ def main():
         mse_weight=args.mse_weight,
         patience_lronplateau=args.patience_lronplateau,
         disable_tqdm=True,
-        gradient_checkpointing=True,
     )
 
     custom_metrics_fn = partial(
