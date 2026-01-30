@@ -45,14 +45,13 @@ def main():
     argparser.add_argument("--patience_lronplateau", type=int, default=2, help="Patience per ReduceLROnPlateau scheduler")
     argparser.add_argument("--threshold_lronplateau", type=float, default=0.005, help="Threshold per ReduceLROnPlateau scheduler")
 
+    with open("config/config.yaml", 'r') as config_file:
+        config = yaml.safe_load(config_file)
 
     args = argparser.parse_args()
     train_file = args.train_file
     dev_file = args.dev_file
     output_dir = config["paths"]["output_dir"]
-
-    with open("config/config.yaml", 'r') as config_file:
-        config = yaml.safe_load(config_file)
    
     train_ds, dev_ds = load_datasets(train_file, dev_file)
     
