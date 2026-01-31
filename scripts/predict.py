@@ -12,11 +12,12 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from src.inference_utils import load_inference_model, get_prediction
 
 def main():
-    argparser = argparse.ArgumentParser(description="Script di inferenza per Flan-T5")
-    argparser.add_argument("--output_file", type=str, default="outputs/predictions/predictions.jsonl", help="File di output per le predizioni")
-    argparser.add_argument("--test_file", type=str, default="data/raw/test.json", help="Percorso al file di test")
-    argparser.add_argument("--zip_file", type=str, default="outputs/predictions/predictions.zip", help="File ZIP di output")
-    argparser.add_argument("--max_length", type=int, default=1024, help="Lunghezza massima per il tokenizing")
+    # Parse command-line arguments
+    argparser = argparse.ArgumentParser(description="Flan-T5 Inference Pipeline")
+    argparser.add_argument("--output_file", type=str, default="outputs/predictions/predictions.jsonl", help="Path to the output file for generated predictions.")
+    argparser.add_argument("--test_file", type=str, default="data/raw/test.json", help="Path to the input test file.")
+    argparser.add_argument("--zip_file", type=str, default="outputs/predictions/predictions.zip", help="Path to the output ZIP archive.")
+    argparser.add_argument("--max_length", type=int, default=512, help="Maximum sequence length for tokenization.")
     
     args = argparser.parse_args()
 
@@ -24,15 +25,16 @@ def main():
     output_file = args.output_file
     zip_file= args.zip_file
 
+    # Configuration loading
     with open("config/config.yaml" , "r") as config_file:
         config = yaml.safe_load(config_file)
 
     if not os.path.exists(config['paths']['output_dir']):
-        raise FileNotFoundError(f"Non trovo il modello in {config['paths']['output_dir']}. Hai lanciato train.py?")
+        raise FileNotFoundError(f"Model not found at {config['paths']['output_dir']}. Have you executed 'train.py'?")
 
     model, tokenizer = load_inference_model(config['model']['base_model'], config['paths']['output_dir'])
     
-    # Identificazione ID dei token target (1, 2, 3, 4, 5)
+    # Identify target token IDs (1, 2, 3, 4, 5)
     target_token_ids = [tokenizer.encode(str(i), add_special_tokens=False)[0] for i in range(1, 6)]
     target_token_ids_tensor = torch.tensor(target_token_ids, device=model.device)
 
@@ -40,7 +42,7 @@ def main():
     with open(test_file, 'r') as f:
         raw_data = json.load(f)
 
-    print(f"Avvio inferenza su {len(raw_data)} esempi...")
+    print(f"Running inference on {len(raw_data)} examples...")
     predictions = []
 
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
@@ -68,14 +70,14 @@ def main():
                 f_out.write(json.dumps(result) + "\n")
                 
             except Exception as e:
-                print(f"Errore sull'ID {example.get('instance_id', 'unknown')}: {e}")
+               print(f"Error processing sample ID {sample_id}: {e}")
 
-    print(f"Predizioni salvate in: {output_file}")
-    print(f"Creo archivio ZIP...")
+    print(f"Predictions saved to: {output_file}")
+    print(f"Creating ZIP archive...")
     with zipfile.ZipFile(zip_file, 'w', zipfile.ZIP_DEFLATED) as zipf:
         zipf.write(output_file, arcname="predictions.jsonl")
     
-    print(f"Tutto pronto! File da sottomettere: {zip_file}")
+    print(f"Submission archive created successfully: {zip_file}")
 
 if __name__ == "__main__":
     main()

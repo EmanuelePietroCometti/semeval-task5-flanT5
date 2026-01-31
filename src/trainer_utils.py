@@ -8,7 +8,12 @@ from tqdm.auto import tqdm
 
 
 class MasterProgressCallback(ProgressCallback):
-    """Gestisce un'unica barra per il training evitando ogni altro log testuale."""
+    """
+    Custom progress bar callback that shows training progress using tqdm.
+    Used for better visualization during training.
+
+    :param ProgressCallback: base class from transformers
+    """
     def __init__(self):
         super().__init__()
         self.training_bar = None
@@ -37,14 +42,28 @@ class MasterProgressCallback(ProgressCallback):
 
 @dataclass
 class CustomSeq2SeqTrainingArguments(Seq2SeqTrainingArguments):
-    acc_weight: float = field(default=0.7, metadata={"help": "Peso per l'accuracy"})
-    spearman_weight: float = field(default=0.3, metadata={"help": "Peso per Spearman"})
+    acc_weight: float = field(default=0.7, metadata={"help": "Weight accuracy"})
+    spearman_weight: float = field(default=0.3, metadata={"help": "Weight for spearman"})
     ce_weight: float = field(default=0.1)
     mse_weight: float = field(default=0.9)
 
-# Collator Custom
 class RobustDataCollator(DataCollatorForSeq2Seq):
+    """
+    Custom data collator that adds target scores and standard deviations to the batch.
+    Inherits from DataCollatorForSeq2Seq to handle padding and batching.
+
+    :param DataCollatorForSeq2Seq: base class from transformers
+    :return: batch with additional fields
+    """
+
     def __call__(self, features):
+        """
+        Override the call method to include target scores and standard deviations.
+        
+        :param self: instance of the class
+        :param features: list of features to collate
+        :return: batch with target scores and standard deviations
+        """
         target_scores = [f.get("target_scores", 3.0) for f in features]
         stdevs = [f.get("stdev", 1.0) for f in features]
         
@@ -54,13 +73,15 @@ class RobustDataCollator(DataCollatorForSeq2Seq):
         batch["stdev"] = torch.tensor(stdevs, dtype=torch.float32)
         return batch
 
-# Trainer Custom
-class ExpectedValueTrainer(Seq2SeqTrainer):
-    def __init__(self, *args, target_token_ids=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.target_token_ids = target_token_ids
 
 class ExpectedValueTrainer(Seq2SeqTrainer):
+    """
+    Custom Trainer to compute loss based on expected value from model logits.
+    Inherits from Seq2SeqTrainer to leverage existing training functionalities.
+    
+    :param Seq2SeqTrainer: base class from transformers
+    :return: trainer with custom loss computation
+    """
     def __init__(self, *args, target_token_ids=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.target_token_ids = target_token_ids
@@ -69,13 +90,27 @@ class ExpectedValueTrainer(Seq2SeqTrainer):
             print(f"DEBUG: Target Token IDs per 1-5: {self.target_token_ids}")
 
     def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None, **kwargs):
+        """
+        Custom loss computation combining CrossEntropy and weighted MSE based on annotator uncertainty.
+        
+        :param self: instance of the class
+        :param model: the model being trained
+        :param inputs: the input data for the model
+        :param return_outputs: whether to return outputs along with the loss
+        :param num_items_in_batch: number of items in the current batch
+        :param kwargs: additional keyword arguments
+        """
         target_scores = inputs.pop("target_scores", None)
         stdevs = inputs.pop("stdev", None)
 
         outputs = model(**inputs)
         
-        # CrossEntropy Standard
-        # Questa forza il modello a generare effettivamente i token numerici corretti
+        """" 
+        Cross-Entropy Loss
+        
+        CE Loss obtained directly from model outputs.
+        This loss encourages the model to predict the correct discrete class.
+        """
         ce_loss = outputs.loss 
         
         logits = outputs.logits[:, 0, :].to(torch.float32) 
@@ -92,17 +127,37 @@ class ExpectedValueTrainer(Seq2SeqTrainer):
             target_scores = target_scores.to(model.device)
             stdevs = stdevs.to(model.device)
 
-            # MSE pesato dall'incertezza degli annotatori
+            """
+            MSE Loss weighted by annotator uncertainty
+            
+            The MSE loss is weighted inversely proportional to the annotator standard deviation.
+            This means that examples with lower uncertainty (lower stdev) have a higher impact on the loss."""
             loss_weights = 1.0 / (stdevs + 0.5)
             mse_raw = (preds_cont - target_scores) ** 2
             weighted_mse_loss = (mse_raw * loss_weights).mean()
 
-            # La CE deve guidare l'apprendimento sintattico. La MSE raffina la semantica.
+            """
+            Combine losses
+            
+            The final loss is a weighted sum of the Cross-Entropy loss and the weighted MSE loss.
+            The weights for each component can be adjusted via training arguments.
+            """
             total_loss = (self.args.ce_weight * ce_loss) + (self.args.mse_weight * weighted_mse_loss)
 
         return (total_loss, outputs) if return_outputs else total_loss
 
     def prediction_step(self, model, inputs, prediction_loss_only, ignore_keys=None):
+        """
+        Custom prediction step to return continuous predictions along with loss.
+        This method is used during evaluation to compute metrics.
+        
+        :param self: instance of the class
+        :param model: the model being evaluated
+        :param inputs: the input data for the model
+        :param prediction_loss_only: whether to return only the loss
+        :param ignore_keys:  keys to ignore in the model outputs
+        :return: tuple of loss, continuous predictions, and labels with metadata
+        """
         with torch.no_grad():
             target_scores = inputs.pop("target_scores", None)
             stdevs = inputs.pop("stdev", None)
@@ -124,8 +179,16 @@ class ExpectedValueTrainer(Seq2SeqTrainer):
 
             return (outputs.loss, preds_cont, labels_with_meta)
 
-# Calcolo metriche
 def compute_metrics(eval_pred, acc_weight=0.7, spearman_weight=0.3):
+    """
+    Custom metric computation combining accuracy within standard deviation and Spearman correlation.
+
+    
+    :param eval_pred: tuple of predictions and labels with metadata
+    :param acc_weight: weight for accuracy within standard deviation
+    :param spearman_weight: weight for Spearman correlation
+    :return: dictionary of computed metrics
+    """
     preds, labels_with_meta = eval_pred
 
     y_true = labels_with_meta[:, 0]
@@ -133,6 +196,7 @@ def compute_metrics(eval_pred, acc_weight=0.7, spearman_weight=0.3):
 
     thresholds = np.maximum(1.0, stdevs)
     diff = np.abs(preds - y_true)
+
     accuracy = np.mean(diff <= thresholds)
 
     rho, _ = spearmanr(y_true, preds)
@@ -147,11 +211,27 @@ def compute_metrics(eval_pred, acc_weight=0.7, spearman_weight=0.3):
     }
 
 class EvaluationLogCallback(TrainerCallback):
-    """Mostra i risultati dell'evaluation in una tabella pulita con combined score."""
+    """
+    Custom callback to log evaluation metrics in a structured format.
+    This callback prints a header once and logs metrics after each evaluation.
+
+    :param TrainerCallback: base class from transformers
+    :return: callback for logging evaluation metrics
+    """
     def __init__(self):
         self.header_printed = False
 
     def on_evaluate(self, args, state, control, metrics=None, **kwargs):
+        """
+        Log evaluation metrics in a structured table format.
+        
+        :param self: instance of the class
+        :param args: arguments
+        :param state: training state
+        :param control: control
+        :param metrics: evaluation metrics
+        :param kwargs: additional keyword arguments
+        """
         if metrics:
             train_loss = "N/A"
             for log in reversed(state.log_history):

@@ -2,6 +2,9 @@ import json
 from datasets import Dataset
 
 def build_prompt_text(precontext, sentence, ending, homonym, judged_meaning):
+    """
+    Function to build the prompt text for the model given the input components.
+    """
     story = f"Context: {precontext}\nAmbiguous Sentence: {sentence}\nEnding: {ending}"
     query = (
         f"Task: Rate the plausibility of the word sense for the homonym in the story.\n"
@@ -12,12 +15,15 @@ def build_prompt_text(precontext, sentence, ending, homonym, judged_meaning):
         f"Constraint: Respond only with a single integer between 1 and 5.\n"
         f"Answer: "
     )
-    # Prompt Repetition
+    # Prompt repetition
     full_prompt = f"{query}\nLet me repeat: {query}"
     return full_prompt
 
 # Funzione per caricare i JSON in Dataset HuggingFace
 def load_datasets(train_path, dev_path):
+    """
+    Function to load training and development datasets from JSON files.
+    """
     with open(train_path, "r") as f:
         train_data = list(json.load(f).values())
     with open(dev_path, "r") as f:
@@ -29,7 +35,20 @@ def load_datasets(train_path, dev_path):
 
 # Funzione di tokenizzazione per il Trainer
 def get_tokenize_function(tokenizer, max_length):
+    """
+    Function to create a tokenization function for the datasets.
+    
+    :param tokenizer: the tokenizer to use
+    :param max_length: maximum length for tokenization
+    :return: a function that tokenizes a batch of examples
+    """
     def tokenize_function(batch):
+        """
+        Function to tokenize a batch of examples.
+        
+        :param batch: batch of examples
+        :return: tokenized inputs with labels and additional fields
+        """
         prompts = [
             build_prompt_text(p, s, e, h, js)
             for p, s, e, h, js in zip(

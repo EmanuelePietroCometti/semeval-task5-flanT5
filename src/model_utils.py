@@ -3,6 +3,11 @@ from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, BitsAndBytesConfi
 from peft import LoraConfig, get_peft_model, TaskType
 
 def load_base_model(model_name="google/flan-t5-xl"):
+    """
+    Function to load the base Seq2Seq model with 4-bit quantization.
+    :param model_name: name of the base model to load
+    :return: model and tokenizer
+    """
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_quant_type="nf4", 
@@ -23,6 +28,16 @@ def load_base_model(model_name="google/flan-t5-xl"):
     return model, tokenizer
 
 def apply_lora_config(model, r, alpha, dropout, target_modules):
+    """
+    Function to apply LoRA configuration to the base model.
+    
+    :param model: the base model
+    :param r: rank of LoRA
+    :param alpha: scaling factor
+    :param dropout: dropout rate
+    :param target_modules: list of target modules for LoRA
+    :return: model with LoRA applied
+    """
     peft_config = LoraConfig(
         task_type=TaskType.SEQ_2_SEQ_LM,
         inference_mode=False,
