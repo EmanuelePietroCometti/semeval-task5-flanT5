@@ -176,7 +176,7 @@ We conducted **multiple** runs to iteratively improve performance. Below is a br
 | v4.0.0  | Flan-T5-Large | 0.7466              | 0.5765   | -           |                        |
 | v5.0.0  | Flan-T5-Large | 0.7245              | 0.5762   | -           |                        |
 | v6.0.0  | Flan-T5-XL    | 0.8107              | 0.6841   | 2.4397e-129 | Results from codabench |
-| v7.0.0  | Flan-T5-XL    | 0.8520              | 0.7218   | -           |                        |
+| v7.0.0  | Flan-T5-XL    | 0.7785              | 0.6612   | 5.8541e-118 | Results from codabench |
 
 ### Main differences between versions
 
