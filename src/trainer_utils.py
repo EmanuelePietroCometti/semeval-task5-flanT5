@@ -3,7 +3,6 @@ import numpy as np
 from dataclasses import dataclass, field
 from transformers import Seq2SeqTrainer, DataCollatorForSeq2Seq, Seq2SeqTrainingArguments, TrainerCallback, ProgressCallback
 from scipy.stats import spearmanr
-from torch.optim.lr_scheduler import ReduceLROnPlateau
 import torch.nn.functional as F
 from tqdm.auto import tqdm
 
@@ -42,8 +41,6 @@ class CustomSeq2SeqTrainingArguments(Seq2SeqTrainingArguments):
     spearman_weight: float = field(default=0.3, metadata={"help": "Peso per Spearman"})
     ce_weight: float = field(default=0.1)
     mse_weight: float = field(default=0.9)
-    patience_lronplateau: int = field(default=2)
-    threshold_lronplateau: float = field(default=0.005)
 
 # Collator Custom
 class RobustDataCollator(DataCollatorForSeq2Seq):
@@ -62,30 +59,12 @@ class ExpectedValueTrainer(Seq2SeqTrainer):
     def __init__(self, *args, target_token_ids=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.target_token_ids = target_token_ids
-        
-    def create_scheduler(self, num_training_steps: int, optimizer: torch.optim.Optimizer = None):
-        if self.lr_scheduler is None:
-            self.lr_scheduler = ReduceLROnPlateau(
-                optimizer if optimizer is not None else self.optimizer,
-                mode='max',
-                factor=0.5,
-                patience=self.args.patience_lronplateau,
-                threshold=0.005,
-            )
-        return self.lr_scheduler
-
-
-    # All'interno di ExpectedValueTrainer
-    # In src/trainer_utils.py
-
-# ... (imports rimangono uguali)
 
 class ExpectedValueTrainer(Seq2SeqTrainer):
     def __init__(self, *args, target_token_ids=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.target_token_ids = target_token_ids
         
-        # VERIFICA CRITICA: Stampa i token che stiamo tracciando
         if self.target_token_ids:
             print(f"DEBUG: Target Token IDs per 1-5: {self.target_token_ids}")
 
@@ -145,7 +124,7 @@ class ExpectedValueTrainer(Seq2SeqTrainer):
 
             return (outputs.loss, preds_cont, labels_with_meta)
 
-# Caclolo metriche
+# Calcolo metriche
 def compute_metrics(eval_pred, acc_weight=0.7, spearman_weight=0.3):
     preds, labels_with_meta = eval_pred
 
@@ -191,7 +170,7 @@ class EvaluationLogCallback(TrainerCallback):
             row = f"{step:<8} | {train_loss:<12} | {eval_loss:<12.4f} | {acc:<10.4f} | {spearman:<10.4f} | {combined:<10.4f}"
 
             if not self.header_printed:
-                tqdm.write(f"\n{header}") # Sostituisci print con tqdm.write
+                tqdm.write(f"\n{header}")
                 tqdm.write(separator)
                 self.header_printed = True
 

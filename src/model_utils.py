@@ -1,6 +1,6 @@
 import torch
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, BitsAndBytesConfig
-from peft import LoraConfig, get_peft_model, TaskType
+from peft import LoraConfig, get_peft_model, TaskType, prepare_model_for_kbit_training
 
 def load_base_model(model_name="google/flan-t5-xl"):
     bnb_config = BitsAndBytesConfig(
@@ -18,6 +18,10 @@ def load_base_model(model_name="google/flan-t5-xl"):
         quantization_config=bnb_config,
         device_map=device_map,
     )
+
+    model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=True)
+    model.config.use_cache = False
+    
     return model, tokenizer
 
 def apply_lora_config(model, r, alpha, dropout, target_modules):

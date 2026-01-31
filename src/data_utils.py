@@ -13,7 +13,7 @@ def build_prompt_text(precontext, sentence, ending, homonym, judged_meaning):
         f"Answer: "
     )
     # Prompt Repetition
-    full_prompt = f"{query}"
+    full_prompt = f"{query}\nLet me repeat: {query}"
     return full_prompt
 
 # Funzione per caricare i JSON in Dataset HuggingFace

@@ -39,8 +39,6 @@ def main():
     argparser.add_argument("--max_length", type=int, default=512, help="Lunghezza massima per il tokenizing")
     argparser.add_argument("--ce_weight", type=float, default=1.0, help="Peso per la CrossEntropy nella loss combinata")
     argparser.add_argument("--mse_weight", type=float, default=1.0, help="Peso per la MSE nella loss combinata")
-    argparser.add_argument("--patience_lronplateau", type=int, default=2, help="Patience per ReduceLROnPlateau scheduler")
-    argparser.add_argument("--threshold_lronplateau", type=float, default=0.005, help="Threshold per ReduceLROnPlateau scheduler")
     argparser.add_argument("--gradient_accumulation_steps", type=int, default=1, help="Numero di step per l'accumulazione del gradiente")
 
     with open("config/config.yaml", 'r') as config_file:
@@ -119,7 +117,6 @@ def main():
         remove_unused_columns=False,
         ce_weight=args.ce_weight,
         mse_weight=args.mse_weight,
-        patience_lronplateau=args.patience_lronplateau,
         disable_tqdm=True,
     )
 
