@@ -13,7 +13,8 @@ def load_inference_model(base_model_name, lora_model_path):
     # Carica modello base
     base_model = AutoModelForSeq2SeqLM.from_pretrained(
         base_model_name,
-        device_map="auto"
+        device_map="auto",
+        use_cache=False
     )
 
     print(f"Loading LoRA adapters from: {lora_model_path}...")
