@@ -3,7 +3,7 @@ model:
   lora_r: 16
   lora_alpha: 32
   lora_dropout: 0.1
-  target_modules: ["q", "v", "wi_0", "wi_1", "wo", "lm_head"]
+  target_modules: ["q", "v"]
 
 training:
   eval_steps: 100

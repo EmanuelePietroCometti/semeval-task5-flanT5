@@ -118,7 +118,6 @@ def main():
         ce_weight=args.ce_weight,
         mse_weight=args.mse_weight,
         disable_tqdm=True,
-        gradient_checkpointing=True,
     )
 
     custom_metrics_fn = partial(
