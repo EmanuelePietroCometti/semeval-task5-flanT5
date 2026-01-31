@@ -1,5 +1,62 @@
 # SemEval Task 5: Plausibility estimation with Flan-T5-XL
 
+## Reproducibility
+
+### Local Execution
+
+Hardware Prerequisites:
+NVIDIA GPU with at least **16GB VRAM** (required for Flan-T5-XL with QLoRA).
+
+***Note:*** For GPUs with less memory (e.g., T4 16GB or lower), we recommend reducing the `batch_size` in `config/config.yaml` or using the Flan-T5-Large variant.
+
+1. Clone and Install
+
+```Bash
+git clone https://github.com/your-username/semeval-task5-flant5.git
+cd semeval-task5-flant5
+
+# Create a virtual environment (recommended)
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+2. Data Preparation:
+
+   1. Download the official dataset from the SemEval 2026 Task 5 competition page. ([SemEval 2026 Task 5](https://nlu-lab.github.io/semeval.html))
+   2. Create a `data/` directory in the root of the project.
+   3. Place the JSON files inside `data/` and rename them for consistency:
+      * train.json
+      * dev.json
+      * test.json
+3. Start Training To start fine-tuning using the parameters defined in config/config.yaml:
+
+```Bash
+python scripts/train.py
+```
+
+The model artifacts (LoRA adapters) will be saved in the `outputs/` directory.
+
+### Google Colab Execution
+
+For an immediate experience without local configuration, you can use the provided Jupyter notebook.
+
+1. Upload the `launcher.ipynb` file to Google Colab.
+2. Ensure you select a GPU Runtime (Menu: Runtime > Change runtime type > T4 GPU or A100 GPU).
+3. Execute the cells in sequence: the notebook handles cloning the repository, installing dependencies, and launching the training process.
+
+***Note:*** If you are using a standard T4 GPU (16GB), you may need to enable gradient checkpointing or reduce the batch size in the config file if you encounter OOM (Out Of Memory) errors.
+
+### Advanced Configuration
+
+All training hyperparameters (learning rate, batch size, LoRA rank, etc.) are fully configurable via the configuration file:
+
+`config/config.yaml`
+
+Modify this file to test different experimental setups without altering the source code.
+
 ## Introduction
 
 This repository contains the code and resources for fine-tuning **Flan-T5-XL (3B parameters)** to solve SemEval Task 5. The task involves estimating the plausibility of a specific word sense (homonym) within a narrative context.
@@ -33,12 +90,14 @@ Let $p \in \mathbb{R}^5$ be the softmax probability distribution over the tokens
 
 $$
 \hat{y} = \mathbb{E}[p] = \sum_{k=1}^{5} k \cdot p_k
+
 $$
 
 The total loss $\mathcal{L}$ is defined as:
 
 $$
 \mathcal{L} = \lambda_{CE} \cdot \mathcal{L}_{CE} + \lambda_{MSE} \cdot \mathcal{L}_{WMSE}
+
 $$
 
 Where:
@@ -50,6 +109,7 @@ The Weighted Mean Squared Error (WMSE) accounts for annotator uncertainty ($\sig
 
 $$
 \mathcal{L}_{WMSE} = \frac{1}{N} \sum_{i=1}^{N} \frac{(\hat{y}_i - y_i)^2}{\sigma_i + \epsilon}
+
 $$
 
 where $\epsilon = 0.5$ is a smoothing term.
@@ -58,6 +118,7 @@ The total loss $\mathcal{L}$ combines the cross-entropy loss (structural) and th
 
 $$
 \mathcal{L} = \lambda_{CE} \cdot \mathcal{L}_{CE} + \lambda_{MSE} \cdot \mathcal{L}_{WMSE}
+
 $$
 
 In this way, samples where human annotators disagreed (high $\sigma$) are penalized less, as the "ground truth" is inherently fuzzy. Samples with high agreement (low $\sigma$) heavily penalize the model for errors.
@@ -124,6 +185,7 @@ This metric measures whether the model's prediction is "indistinguishable" from 
 
 $$
 \text{Accuracy} = \frac{1}{N} \sum_{i=1}^{N} \mathbb{I}\left( | \hat{y}_i - y_i | \le \max(1.0, \sigma_i) \right)
+
 $$
 
 It prevents penalizing the model for "errors" that are actually statistically valid given the noise in the dataset.
@@ -134,6 +196,7 @@ While accuracy measures "closeness," it doesn't capture whether the model correc
 
 $$
 \rho = \frac{\text{cov}(R(\hat{y}), R(y))}{\sigma_{R(\hat{y})} \sigma_{R(y)}}
+
 $$
 
 In many downstream applications, the absolute score (e.g., 3.4 vs 3.6) matters less than the model's ability to correctly say that *Sentence A* is more plausible than *Sentence B*. A high Spearman score indicates the model has learned the correct semantic ordering.
